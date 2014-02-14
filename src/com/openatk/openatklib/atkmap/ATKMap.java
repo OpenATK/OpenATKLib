@@ -103,6 +103,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	int panOffsetYPolygonDrawing = 0;
 	int panOffsetXPolygonDrawing = 0;
 	
+	private Point lastClickPoint; //Used when a marker is clicked but we don't want this marker to be clickable
+	
 	//Used locally to handle events
 	private GoogleMapClickListener googleMapClickListener;
 	private GoogleMarkerClickListener googleMarkerClickListener;
@@ -259,7 +261,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 					clickedPoint.setIcon(iconPointSelectedPolylineDrawing);
 				}
 				return true; //Consume click
-			}
+			}			
 			
 			Boolean wasClicked = null;
 			ATKPointView point = null;
@@ -276,6 +278,15 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				//Was clicked but wasn't consumed, pass to default atkPointClickListener
 				atkPointClickListener.onClick(point);
 			}
+			
+			//Check if a polygon's label was clicked.
+			for(int i=0; i<polygons.size(); i++){
+				if(polygons.get(i).labelWasClicked(marker)){
+					googleMapClickListener.onMapClick(map.getProjection().fromScreenLocation(lastClickPoint));
+					return true;
+				}
+			}
+			
 			return false;
 		}
 	}
@@ -374,6 +385,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	@Override
 	public boolean onTouch(MotionEvent event) {
 		//The map was touched, this triggers before GoogleMapClickListener
+		lastClickPoint = new Point((int) event.getX(), (int) event.getY());
+		
 		//If we return true GoogleMapClickListener wont get the touch event
 		if(this.isDrawingPolygon && isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_MOVE){
 			//We are dragging the polygons selected point

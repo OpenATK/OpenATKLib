@@ -5,14 +5,24 @@ import java.util.ArrayList;
 import java.util.List;
 
 import pl.mg6.android.maps.extensions.GoogleMap;
+import pl.mg6.android.maps.extensions.Marker;
+import pl.mg6.android.maps.extensions.MarkerOptions;
 import pl.mg6.android.maps.extensions.Polygon;
 import pl.mg6.android.maps.extensions.PolygonOptions;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 import android.graphics.Point;
+import android.graphics.Rect;
+import android.graphics.Paint.Align;
 import android.util.Log;
 
 import com.google.android.gms.maps.Projection;
+import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.openatk.openatklib.atkmap.listeners.ATKPolygonClickListener;
 import com.openatk.openatklib.atkmap.models.ATKPolygon;
 
@@ -22,6 +32,13 @@ public class ATKPolygonView {
 	
 	
 	private Polygon mapPolygon;
+	private Marker mapLabelMarker;
+	private String mapLabelString;
+	
+	private BitmapDescriptor iconLabel;
+	private BitmapDescriptor iconLabelSelected;
+	private boolean blnLabelSelected = false;
+
 	private PolygonOptions polygonOptions;
 	private ATKPolygonClickListener clickListener;
 	
@@ -140,6 +157,13 @@ public class ATKPolygonView {
 		return false;
 	}
 		
+	public boolean labelWasClicked(Marker marker){
+		if(mapLabelMarker != null && this.mapLabelMarker.equals(marker)){
+			return true;
+		}
+		return false;
+	}
+	
 	private void drawPolygon(){
 		Log.d("atkPolygonView", "drawPolygon");
 		if(this.polygon.boundary != null && this.polygon.boundary.size() > 0){
@@ -164,6 +188,84 @@ public class ATKPolygonView {
 			if(this.mapPolygon != null) this.mapPolygon.remove();
 			this.mapPolygon = null;
 		}
+		this.drawLabel();
+	}
+	
+	private void drawLabel(){
+		if(this.mapLabelString != null && this.mapLabelString.length() > 0 && this.iconLabel != null && this.iconLabelSelected != null && this.polygon.boundary != null && this.polygon.boundary.size() > 2){
+			LatLngBounds.Builder builder = new LatLngBounds.Builder();
+			for (int i = 0; i < polygon.boundary.size(); i++) {
+				builder.include(polygon.boundary.get(i));
+			}
+			// Have corners
+			LatLngBounds boundingBox = builder.build();
+			LatLng where = midPoint(boundingBox.northeast, boundingBox.southwest);
+
+			BitmapDescriptor icon;
+			if(this.blnLabelSelected == true){
+				icon = this.iconLabelSelected;
+			} else {
+				icon = this.iconLabel;
+			}
+			
+			if(this.mapLabelMarker == null){
+				this.mapLabelMarker = map.addMarker(new MarkerOptions().position(where).icon(icon).draggable(false));
+			} else {
+				//Move the marker label
+				this.mapLabelMarker.setPosition(where);
+				this.mapLabelMarker.setIcon(icon);
+			}
+		} else {
+			if(this.mapLabelMarker != null) this.mapLabelMarker.remove();
+			this.mapLabelMarker = null;
+		}
+	}
+	public void setLabel(String label){
+		this.setLabel(label, false);
+	}
+	public void setLabel(String label, Boolean selected){
+		this.mapLabelString = label;
+		this.blnLabelSelected = selected;
+		
+		if(label == null || label.length() == 0){
+			this.drawLabel();
+			return;
+		}
+		
+		Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+		paint.setTextAlign(Align.LEFT);
+		paint.setTextSize(20);
+		paint.setStrokeWidth(12);
+		
+		Rect bounds = new Rect();
+		paint.getTextBounds(label, 0, label.length(), bounds);
+		
+		Bitmap.Config conf = Bitmap.Config.ARGB_8888;
+		Bitmap bitmapSelected = Bitmap.createBitmap(bounds.width() + 5, bounds.height(), conf);
+		Bitmap bitmap = Bitmap.createBitmap(bounds.width() + 5, bounds.height(), conf);
+		float x = 0;
+		float y = -1.0f * bounds.top + (bitmap.getHeight() * 0.06f);
+				
+		Canvas canvas = new Canvas(bitmap);
+		canvas.drawText(label, x, y, paint);
+		
+		canvas = new Canvas(bitmapSelected);
+		paint.setColor(Color.WHITE);
+		paint.setShadowLayer(1f, 0f, 1f, Color.DKGRAY);
+		canvas.drawText(label, x, y, paint);
+		
+		this.iconLabel = BitmapDescriptorFactory.fromBitmap(bitmap);
+		this.iconLabelSelected = BitmapDescriptorFactory.fromBitmap(bitmapSelected);
+		this.drawLabel();
+	}
+
+	public void setLabelSelected(boolean selected){
+		this.blnLabelSelected = selected;
+		this.drawLabel();
+	}
+	
+	public String getLabel(){
+		return this.mapLabelString;
 	}
 
 	private boolean isPointInPolygon(Point tap, List<Point> vertices) {
@@ -199,5 +301,22 @@ public class ATKPolygonView {
 		double x = (pY - bee) / m; // algebra is neat!
 
 		return x > pX;
+	}
+	
+	public static LatLng midPoint(LatLng point1, LatLng point2){
+		//Used by drawLabel
+	    double dLon = Math.toRadians(point2.longitude - point1.longitude);
+
+	    //convert to radians
+	    double lat1 = Math.toRadians(point1.latitude);
+	    double lat2 = Math.toRadians(point2.latitude);
+	    double lon1 = Math.toRadians(point1.longitude);
+
+	    double Bx = Math.cos(lat2) * Math.cos(dLon);
+	    double By = Math.cos(lat2) * Math.sin(dLon);
+	    double lat3 = Math.atan2(Math.sin(lat1) + Math.sin(lat2), Math.sqrt((Math.cos(lat1) + Bx) * (Math.cos(lat1) + Bx) + By * By));
+	    double lon3 = lon1 + Math.atan2(By, Math.cos(lat1) + Bx);
+	    
+	    return(new LatLng(Math.toDegrees(lat3), Math.toDegrees(lon3)));
 	}
 }
