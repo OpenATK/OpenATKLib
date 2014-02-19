@@ -15,7 +15,7 @@ public class ATKPointView {
 	
 	private Marker marker;
 	private MarkerOptions markerOptions;
-	
+	private boolean disabled = false;
 
 	public ATKPointView(GoogleMap map, ATKPoint point){
 		this.map = map;
@@ -78,9 +78,15 @@ public class ATKPointView {
 		return consumed;
 	}
 	
+	public void disableDrawing(boolean disabled){
+		//Used by ATKPointClusterer
+		this.disabled = disabled;
+		if(disabled == true) this.remove();
+	}
+	
 	private void drawPoint(){
 		//Draw the point on the map
-		if(point.position != null) {
+		if(point.position != null && disabled == false) {
 			markerOptions.position(point.position);
 			if(marker == null) {
 				marker = this.map.addMarker(markerOptions);
