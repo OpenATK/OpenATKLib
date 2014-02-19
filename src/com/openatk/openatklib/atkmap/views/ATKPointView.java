@@ -16,6 +16,8 @@ public class ATKPointView {
 	private Marker marker;
 	private MarkerOptions markerOptions;
 	private boolean disabled = false;
+	private boolean cluster = false;
+
 
 	public ATKPointView(GoogleMap map, ATKPoint point){
 		this.map = map;
@@ -76,6 +78,10 @@ public class ATKPointView {
 			}
 		}
 		return consumed;
+	}
+	
+	public void cluster(boolean cluster){
+		this.cluster = cluster;
 	}
 	
 	public void disableDrawing(boolean disabled){
