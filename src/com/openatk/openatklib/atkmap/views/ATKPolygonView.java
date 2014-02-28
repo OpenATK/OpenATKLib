@@ -4,25 +4,25 @@ package com.openatk.openatklib.atkmap.views;
 import java.util.ArrayList;
 import java.util.List;
 
-import pl.mg6.android.maps.extensions.GoogleMap;
-import pl.mg6.android.maps.extensions.Marker;
-import pl.mg6.android.maps.extensions.MarkerOptions;
-import pl.mg6.android.maps.extensions.Polygon;
-import pl.mg6.android.maps.extensions.PolygonOptions;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Paint.Align;
 import android.graphics.Point;
 import android.graphics.Rect;
-import android.graphics.Paint.Align;
 import android.util.Log;
 
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.openatk.openatklib.atkmap.listeners.ATKPolygonClickListener;
 import com.openatk.openatklib.atkmap.models.ATKPolygon;
 
@@ -139,7 +139,10 @@ public class ATKPolygonView {
 			Point aPoint = proj.toScreenLocation(this.polygon.boundary.get(i));
 			pointsBoundary.add(aPoint);
 		}
-		if(isPointInPolygon(point, pointsBoundary)) return true;
+		if(isPointInPolygon(point, pointsBoundary)){
+			Log.d("ATKPolygonView","Point is in poly");
+			return true;
+		}
 		return false;
 	}
 	
@@ -270,7 +273,13 @@ public class ATKPolygonView {
 
 	private boolean isPointInPolygon(Point tap, List<Point> vertices) {
 		int intersectCount = 0;
+		if(vertices.size() > 2){
+			vertices.add(vertices.get(0)); //End with the first point again so we can check all the sides
+		} else {
+			return false;
+		}
 		for (int j = 0; j < vertices.size() - 1; j++) {
+			Log.d("j:",Integer.toString(j));
 			if (rayCastIntersect(tap, vertices.get(j), vertices.get(j + 1))) {
 				intersectCount++;
 			}
@@ -288,14 +297,16 @@ public class ATKPolygonView {
 
 		if ((aY > pY && bY > pY) || (aY < pY && bY < pY)
 				|| (aX < pX && bX < pX)) {
-			return false; // a and b can't both be above or below pt.y, and a or b must be east of pt.x
+			return false; // a and b can't both be above or below pt.y, and a or
+							// b must be east of pt.x
 		}
 		
 		//If both a and b are east of point tapped at this point then we are good to go
 		if(aX > pX && bX > pX){
 			return true;
 		}
-
+		
+		//Otherwise we are forced to do math
 		double m = (aY - bY) / (aX - bX); // Rise over run
 		double bee = (-aX) * m + aY; // y = mx + b
 		double x = (pY - bee) / m; // algebra is neat!

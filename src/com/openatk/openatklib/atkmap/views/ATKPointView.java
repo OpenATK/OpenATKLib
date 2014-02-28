@@ -1,10 +1,11 @@
 package com.openatk.openatklib.atkmap.views;
 
-import pl.mg6.android.maps.extensions.GoogleMap;
-import pl.mg6.android.maps.extensions.Marker;
-import pl.mg6.android.maps.extensions.MarkerOptions;
 
+
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
+import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.MarkerOptions;
 import com.openatk.openatklib.atkmap.listeners.ATKPointClickListener;
 import com.openatk.openatklib.atkmap.models.ATKPoint;
 
@@ -65,12 +66,12 @@ public class ATKPointView {
 	
 	public void setOnClickListener(ATKPointClickListener listener){
 		this.clickListener = listener;
-	}
+	} 
 	
 	public Boolean wasClicked(Marker clickedMarker){  //TODO protected?
 		//Returns null if wasn't clicked, false if clicked and consumed, true if clicked and not consumed
 		Boolean consumed = null;
-		if(this.marker == clickedMarker){
+		if(this.marker.equals(clickedMarker)){
 			consumed = false;
 			//Check if we have a click listener
 			if(this.clickListener != null){

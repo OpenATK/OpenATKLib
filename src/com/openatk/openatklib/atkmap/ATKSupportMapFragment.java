@@ -1,7 +1,6 @@
 package com.openatk.openatklib.atkmap;
 
 
-import pl.mg6.android.maps.extensions.SupportMapFragment;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -9,6 +8,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 
+import com.google.android.gms.maps.SupportMapFragment;
 import com.openatk.openatklib.atkmap.listeners.ATKTouchableWrapperListener;
 
 public class ATKSupportMapFragment extends SupportMapFragment {
@@ -32,8 +32,7 @@ public class ATKSupportMapFragment extends SupportMapFragment {
 	    //Add listeners for clicks on the map
 	    //mTouchView.addListener(new panListener(v));
 	    
-	    //Would be getMap() if not using android-map-extensions
-	    this.map = new ATKMap(this.getExtendedMap(), this.getActivity().getApplicationContext()); 
+	    this.map = new ATKMap(this.getMap(), this.getActivity().getApplicationContext()); 
 	    mTouchView.addListener(this.map); //Let the atkMap listen for touch events
 	    	    
 	    return mTouchView;

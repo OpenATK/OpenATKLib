@@ -1,13 +1,9 @@
 package com.openatk.openatklib.atkmap.views;
 
-import java.util.ArrayList;
-import java.util.List;
-
-import pl.mg6.android.maps.extensions.GoogleMap;
 import android.graphics.Color;
 import android.graphics.Point;
 
-import com.google.android.gms.maps.Projection;
+import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.LatLng;
 import com.openatk.openatklib.atkmap.listeners.ATKPolylineClickListener;
 import com.openatk.openatklib.atkmap.models.ATKPolyline;
