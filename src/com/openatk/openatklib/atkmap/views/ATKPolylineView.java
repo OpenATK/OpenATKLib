@@ -78,7 +78,7 @@ public class ATKPolylineView {
 	public boolean click(){ //TODO protected?
 		//Returns true or false depending if listener consumed the click event		
 		if(this.clickListener != null){
-			return this.clickListener.onClick(this); //Return if we consumed the click
+			return this.clickListener.onPolylineClick(this); //Return if we consumed the click
 		}
 		return false;
 	}

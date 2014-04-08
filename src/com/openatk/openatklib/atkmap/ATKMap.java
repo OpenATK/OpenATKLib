@@ -5,19 +5,27 @@ import java.util.Iterator;
 import java.util.List;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.graphics.BitmapFactory;
 import android.graphics.Color;
 import android.graphics.Point;
+import android.location.Location;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 
+import com.google.android.gms.maps.CameraUpdate;
+import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
+import com.google.android.gms.maps.GoogleMap.CancelableCallback;
 import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
+import com.google.android.gms.maps.Projection;
+import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.gson.Gson;
@@ -26,11 +34,13 @@ import com.openatk.openatklib.R;
 import com.openatk.openatklib.atkmap.listeners.ATKDrawListener;
 import com.openatk.openatklib.atkmap.listeners.ATKMapClickListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPointClickListener;
+import com.openatk.openatklib.atkmap.listeners.ATKPointDragListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPolygonClickListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPolylineClickListener;
 import com.openatk.openatklib.atkmap.listeners.ATKTouchableWrapperListener;
 import com.openatk.openatklib.atkmap.models.ATKPoint;
 import com.openatk.openatklib.atkmap.models.ATKPolygon;
+import com.openatk.openatklib.atkmap.models.ATKPolyline;
 import com.openatk.openatklib.atkmap.views.ATKPointView;
 import com.openatk.openatklib.atkmap.views.ATKPolygonView;
 import com.openatk.openatklib.atkmap.views.ATKPolylineView;
@@ -39,6 +49,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	//Callbacks to whoever uses this library
 	private ATKMapClickListener atkMapClickListener;
 	private ATKPointClickListener atkPointClickListener;
+	private ATKPointDragListener atkPointDragListener;
+
 	private ATKPolygonClickListener atkPolygonClickListener;
 	private ATKPolylineClickListener atkPolylineClickListener;
 	private ATKDrawListener atkDrawListener;
@@ -51,6 +63,9 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	int colorStrokeCompletePolygonDrawing = Color.argb(255, 0, 0, 0);
 	
 	int resIdPointSelectedPolylineDrawing = R.drawable.selected_vertex;
+	int PointSelectedPolylineDrawingHeight = 0;
+	int PointSelectedPolylineDrawingWidth = 0;
+
 	float anchorVPointSelectedPolylineDrawing = 0.5f;
 	float anchorUPointSelectedPolylineDrawing = 0.5f;
 	float anchorVPanPointSelectedPolylineDrawing = 0.5f;
@@ -59,10 +74,16 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	int panHeightPointSelectedPolylineDrawing = 64;
 	
 	int resIdPointPolylineDrawing = R.drawable.unselected_vertex;
+	int PointPolylineDrawingHeight = 0;
+	int PointPolylineDrawingWidth = 0;
+
 	float anchorVPointPolylineDrawing = 0.5f;
 	float anchorUPointPolylineDrawing = 0.5f;
 	
 	int resIdPointSelectedPolygonDrawing = R.drawable.selected_vertex;
+	int PointSelectedPolygonDrawingHeight = 0;
+	int PointSelectedPolygonDrawingWidth = 0;
+
 	float anchorVPointSelectedPolygonDrawing = 0.75f;
 	float anchorUPointSelectedPolygonDrawing = 0.25f;
 	float anchorVPanPointSelectedPolygonDrawing = 0.5f;
@@ -71,6 +92,9 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	int panHeightPointSelectedPolygonDrawing = 64;
 
 	int resIdPointPolygonDrawing = R.drawable.unselected_vertex;
+	int PointPolygonDrawingHeight = 0;
+	int PointPolygonDrawingWidth = 0;
+
 	float anchorVPointPolygonDrawing = 0.5f;
 	float anchorUPointPolygonDrawing = 0.5f;
 	
@@ -104,6 +128,11 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	int panOffsetYPolygonDrawing = 0;
 	int panOffsetXPolygonDrawing = 0;
 	
+	//Used for regular dragging TODO combine this with polygon dragging
+	int draggingStartY;
+	int draggingStartX;
+	ATKPointView draggingPoint;
+	
 	private Point lastClickPoint; //Used when a marker is clicked but we don't want this marker to be clickable
 	
 	//Used locally to handle events
@@ -126,31 +155,27 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.iconPointPolygonDrawing = BitmapDescriptorFactory.fromResource(this.resIdPointPolygonDrawing);
 		this.iconPointSelectedPolylineDrawing = BitmapDescriptorFactory.fromResource(this.resIdPointSelectedPolylineDrawing);
 		this.iconPointPolylineDrawing = BitmapDescriptorFactory.fromResource(this.resIdPointPolylineDrawing);
+		
+		//Get dimensions from icon
+		BitmapFactory.Options dimensions = new BitmapFactory.Options(); 
+		dimensions.inJustDecodeBounds = true;
+		BitmapFactory.decodeResource(this.context.getResources(), this.resIdPointSelectedPolygonDrawing, dimensions);
+		this.PointSelectedPolygonDrawingHeight = dimensions.outHeight;
+		this.PointSelectedPolygonDrawingWidth =  dimensions.outWidth;
+		
+		BitmapFactory.decodeResource(this.context.getResources(), this.resIdPointPolygonDrawing, dimensions);
+		this.PointPolygonDrawingHeight = dimensions.outHeight;
+		this.PointPolygonDrawingWidth =  dimensions.outWidth;
+		
+		BitmapFactory.decodeResource(this.context.getResources(), this.resIdPointSelectedPolylineDrawing, dimensions);
+		this.PointSelectedPolylineDrawingHeight = dimensions.outHeight;
+		this.PointSelectedPolylineDrawingWidth =  dimensions.outWidth;
+		
+		BitmapFactory.decodeResource(this.context.getResources(), this.resIdPointPolylineDrawing, dimensions);
+		this.PointPolylineDrawingHeight = dimensions.outHeight;
+		this.PointPolylineDrawingWidth =  dimensions.outWidth;
+		
 		gestureDetector = new GestureDetector(context, new GestureListener());
-	}
-	
-	
-	public void onCreate(Bundle bundle){
-		
-	}
-	
-	public void onSaveInstanceState(Bundle bundle){
-		//Save my stuff in the bundle
-		Bundle myStuff = new Bundle();
-		GsonBuilder builder = new GsonBuilder();
-		Gson gson = builder.create();
-		
-		//Save points
-		for(int i=0; i<points.size(); i++){
-			myStuff.putString("points", gson.toJson(points.get(i).getAtkPoint()));
-		}
-		for(int i=0; i<polygons.size(); i++){
-			myStuff.putString("polygons", gson.toJson(polygons.get(i).getAtkPolygon()));
-		}
-		for(int i=0; i<polylines.size(); i++){
-			myStuff.putString("polylines", gson.toJson(polylines.get(i).getAtkPolyline()));
-		}
-		
 	}
 		
 	public void setOnMapClickListener(ATKMapClickListener listener){
@@ -159,6 +184,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	
 	public void setOnPointClickListener(ATKPointClickListener listener){
 		this.atkPointClickListener = listener;
+	}
+	
+	public void setOnPointDragListener(ATKPointDragListener listener){
+		this.atkPointDragListener = listener;
 	}
 	
 	public void setOnPolygonClickListener(ATKPolygonClickListener listener){
@@ -206,6 +235,35 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		}
 		return null;
 	}
+	public List<ATKPolygonView> getPolygonViews(){
+		return this.polygons;
+	}
+	
+	public ATKPolylineView getPolylineView(Object atkPolylineId){
+		if(atkPolylineId == null) return null;
+		for(int i=0; i<polylines.size(); i++){
+			if(polylines.get(i).getAtkPolyline().id.equals(atkPolylineId)){
+				return polylines.get(i);
+			}
+		}
+		return null;
+	}
+	public List<ATKPolylineView> getPolylineViews(){
+		return this.polylines;
+	}
+	
+	public ATKPointView getPointView(Object atkPointId){
+		if(atkPointId == null) return null;
+		for(int i=0; i<points.size(); i++){
+			if(points.get(i).getAtkPoint().id.equals(atkPointId)){
+				return points.get(i);
+			}
+		}
+		return null;
+	}
+	public List<ATKPointView> getPointViews(){
+		return this.points;
+	}
 	
 	public ATKPolygonView drawPolygon(Object atkPolygonId){
 		//atkPolygon id needs to be unique
@@ -242,32 +300,28 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		public boolean onMarkerClick(Marker marker) {
 			//Touched a point, find which one if and if we consumed
 			if(isDrawingPolygon == true){
-				Log.d("GoogleMarkerClickListener", "isDrawing");
 				//We are drawing a polygon
 				//Check if we clicked any of its points
 				ATKPointView clickedPoint = null;
 				for(int i=0; i<pointsPolygonDrawing.size(); i++){
 					if(pointsPolygonDrawing.get(i).wasClicked(marker) != null){
-						Log.d("GoogleMarkerClickListener", "clickedPoint");
 						clickedPoint = pointsPolygonDrawing.get(i);
 						break;
-					} else {
-						Log.d("GoogleMarkerClickListener", "not clickedPoint");
 					}
 				}
 				if(clickedPoint != null){
-					Log.d("GoogleMarkerClickListener", "selectPoint");
 					//Select this point
 					if(pointSelectedPolylineDrawing != null){
-						pointSelectedPolylineDrawing.setIcon(iconPointPolylineDrawing);
+						pointSelectedPolylineDrawing.setIcon(iconPointPolylineDrawing, PointPolylineDrawingWidth, PointPolylineDrawingHeight);
 						pointSelectedPolylineDrawing.setAnchor(anchorUPointPolylineDrawing, anchorVPointPolylineDrawing);
 					}
 					if(pointSelectedPolygonDrawing != null){
-						pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing);
+						
+						pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing, PointPolygonDrawingWidth, PointPolygonDrawingHeight);
 						pointSelectedPolygonDrawing.setAnchor(anchorUPointPolygonDrawing, anchorVPointPolygonDrawing);
 					}
 					pointSelectedPolygonDrawing = clickedPoint;
-					clickedPoint.setIcon(iconPointSelectedPolygonDrawing);
+					clickedPoint.setIcon(iconPointSelectedPolygonDrawing, PointSelectedPolygonDrawingWidth, PointSelectedPolygonDrawingHeight);
 					clickedPoint.setAnchor(anchorUPointSelectedPolygonDrawing, anchorVPointSelectedPolygonDrawing);
 				}
 				return true; //Consume click
@@ -284,10 +338,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				}
 				if(clickedPoint != null){
 					//Select this point
-					if(pointSelectedPolylineDrawing != null) pointSelectedPolylineDrawing.setIcon(iconPointPolylineDrawing);
-					if(pointSelectedPolygonDrawing != null) pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing);
+					if(pointSelectedPolylineDrawing != null) pointSelectedPolylineDrawing.setIcon(iconPointPolylineDrawing, PointPolylineDrawingWidth, PointPolylineDrawingHeight);
+					if(pointSelectedPolygonDrawing != null) pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing, PointPolygonDrawingWidth, PointPolygonDrawingHeight);
 					pointSelectedPolylineDrawing = clickedPoint;
-					clickedPoint.setIcon(iconPointSelectedPolylineDrawing);
+					clickedPoint.setIcon(iconPointSelectedPolylineDrawing, PointSelectedPolylineDrawingWidth, PointSelectedPolylineDrawingHeight);
 				}
 				return true; //Consume click
 			}			
@@ -295,8 +349,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			Boolean wasClicked = null;
 			ATKPointView point = null;
 			for(int i=0; i<points.size(); i++){
-				wasClicked = points.get(i).wasClicked(marker); //This does the click event on atkPointClickListener
-				if(wasClicked == true){
+				wasClicked = points.get(i).wasClicked(marker); //This does the click event on atkPointClickListener, null if not clicked, true if clicked and consumed, false if clicked and not consumed
+				if(wasClicked == null){
+					//Not clicked
+				} else if(wasClicked == true){
 					return true; //Consume the click
 				} else if(wasClicked == false){
 					point = points.get(i);
@@ -305,7 +361,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			}
 			if(wasClicked != null){
 				//Was clicked but wasn't consumed, pass to default atkPointClickListener
-				atkPointClickListener.onClick(point);
+				atkPointClickListener.onPointClick(point);
 			}
 			
 			//Check if a polygon's label was clicked.
@@ -323,22 +379,20 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	private class GoogleMapClickListener implements OnMapClickListener {
 		@Override
 		public void onMapClick(LatLng position) {
-			Log.d("atkMap - GoogleMapClickListener", "onMapClick");
 			//Google map was clicked
 			if(isDrawingPolygon == true){
-				Log.d("atkMap - GoogleMapClickListener", "we are drawing a polygon");
 				//We are drawing a polygon
 				//Add a point to the map to represent the vertex
 				int selectedPointIndex = 0;
 				if(pointSelectedPolygonDrawing != null) {
-					pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing);
+					pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing, PointPolygonDrawingHeight, PointPolygonDrawingWidth);
 					pointSelectedPolygonDrawing.setAnchor(anchorUPointPolygonDrawing, anchorVPointPolygonDrawing);
 					selectedPointIndex = pointsPolygonDrawing.indexOf(pointSelectedPolygonDrawing);
 				}
 				ATKPoint point = new ATKPoint(nextPointId); //Don't init with position so it won't draw yet
 				nextPointId++;
 				ATKPointView pointView = new ATKPointView(map, point);
-				pointView.setIcon(iconPointSelectedPolygonDrawing);
+				pointView.setIcon(iconPointSelectedPolygonDrawing, PointSelectedPolygonDrawingHeight, PointSelectedPolygonDrawingWidth);
 				pointView.setAnchor(anchorUPointSelectedPolygonDrawing, anchorVPointSelectedPolygonDrawing);
 				point.position = position; //Set position of model
 				pointView.update(); //Tell pointView to refresh its view
@@ -388,7 +442,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				boolean consumed = polygon.click();
 				if(consumed == false){
 					//Pass it to the default listener
-					if(atkPolygonClickListener != null) atkPolygonClickListener.onClick(polygon);
+					if(atkPolygonClickListener != null) atkPolygonClickListener.onPolygonClick(polygon);
 				}
 				return;
 			}
@@ -397,13 +451,13 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				boolean consumed = polyline.click();
 				if(consumed == false){
 					//Pass it to the default listener
-					if(atkPolylineClickListener != null) atkPolylineClickListener.onClick(polyline);
+					if(atkPolylineClickListener != null) atkPolylineClickListener.onPolylineClick(polyline);
 				}
 				return;
 			}			
 			
 			//Notify them if we didn't click a polygon or polygon, or we didn't consume the click
-			if(atkMapClickListener != null) atkMapClickListener.onClick(position);
+			if(atkMapClickListener != null) atkMapClickListener.onMapClick(position);
 		}
 	}
 
@@ -413,6 +467,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		lastClickPoint = new Point((int) event.getX(), (int) event.getY());
 		
 		//If we return true GoogleMapClickListener wont get the touch event
+		
+		//Drawing Polygon stuff
 		if(this.isDrawingPolygon && isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_MOVE){
 			//We are dragging the polygons selected point
 			Point thePoint = new Point((int)event.getX() + panOffsetXPolygonDrawing, (int)event.getY() + panOffsetYPolygonDrawing);
@@ -426,9 +482,11 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			}
 			this.polygonDrawing.getAtkPolygon().boundary = newBoundary;
 			this.polygonDrawing.update();
+			return true;
 		} else if(this.isDrawingPolygon && isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_UP){
 			//Stop dragging polygons selected point
 			this.isDraggingPoint = false;
+			return true;
 		} else if(this.isDrawingPolygon && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_DOWN){
 			if(this.pointSelectedPolygonDrawing != null){
 				//Check if we are pressing on the marker icon
@@ -476,13 +534,84 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				}
 			}
 		}
-		
 		if(this.isDrawingPolygon){
 			if(this.gestureDetector.onTouchEvent(event)){
 				//Consume the double tap
 				return false;
 			}
 		}
+		
+		
+		
+		//Regular map stuff (We need to handle all causes here, not split between drawing and not drawing)
+		if(this.isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_MOVE){
+			//During dragging
+			Point thePoint = new Point((int)event.getX() + this.draggingStartX, (int)event.getY() + this.draggingStartY);
+			this.draggingPoint.getAtkPoint().position = map.getProjection().fromScreenLocation(thePoint);
+			this.draggingPoint.update(); //Update on map
+			Boolean ret = this.draggingPoint.drag();
+			if(ret == null){
+				//Point did not have a drag listener, pass to maps point drag listener if exists
+				if(this.atkPointDragListener != null) this.atkPointDragListener.onPointDrag(this.draggingPoint);
+			} else {
+				//Had listener, if not consumed pass to maps point drag listener if exists
+				if(ret == false && this.atkPointDragListener != null) this.atkPointDragListener.onPointDrag(this.draggingPoint);
+			}
+		} else if(this.isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_UP){
+			//Stop dragging
+			this.isDraggingPoint = false;
+			Boolean ret = this.draggingPoint.dragEnd();
+			if(ret == null){
+				//Point did not have a drag listener, pass to maps point drag listener if exists
+				if(this.atkPointDragListener != null) this.atkPointDragListener.onPointDragEnd(this.draggingPoint);
+			} else {
+				//Had listener, if not consumed pass to maps point drag listener if exists
+				if(ret == false && this.atkPointDragListener != null) this.atkPointDragListener.onPointDragEnd(this.draggingPoint);
+			}
+			this.draggingPoint = null;
+		} else if(event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_DOWN) {
+			//Start dragging
+			//Check all points for super drag option
+			for(int i=0; i < points.size(); i++){
+				if(points.get(i).getSuperDraggable()){
+					//This point is superdraggable, check if we want to drag it
+					ATKPointView point = points.get(i);
+					Point screenPoint = map.getProjection().toScreenLocation(point.getAtkPoint().position);
+					
+					//Get dimensions from icon
+					int iconHeight = point.getIconHeight();
+					int iconWidth =  point.getIconWidth();
+					
+					
+					this.draggingStartY = screenPoint.y - (int)event.getY();
+					this.draggingStartX = screenPoint.x - (int)event.getX();
+					
+					if((screenPoint.x - (iconWidth * point.getAnchorU())) < (int)event.getX()){
+						if((screenPoint.x + (iconWidth * (1.0-point.getAnchorU()))) > (int)event.getX()){
+							if((screenPoint.y - (iconHeight * point.getAnchorV())) < (int)event.getY()){
+								if((screenPoint.y + (iconHeight * (1.0-point.getAnchorV()))) > (int)event.getY()){
+									//Move the point and consume the touch event
+									this.isDraggingPoint = true;
+									this.draggingPoint = point;
+									Boolean ret = this.draggingPoint.dragStart();
+									if(ret == null){
+										//Point did not have a drag listener, pass to maps point drag listener if exists
+										if(this.atkPointDragListener != null) this.atkPointDragListener.onPointDragStart(this.draggingPoint);
+									} else {
+										//Had listener, if not consumed pass to maps point drag listener if exists
+										if(ret == false && this.atkPointDragListener != null) this.atkPointDragListener.onPointDragStart(this.draggingPoint);
+									}
+									return true;
+								}
+							}
+						}
+					}
+					
+					
+				}
+			}
+		}		
+		
 		
 		return false;
 	}
@@ -493,12 +622,47 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	        // event when double tap occurs
 	        @Override
 	        public boolean onDoubleTap(MotionEvent e) {
-	        	Log.d("GestureListener", "double tap");
+	        	Log.d("OpenATKLib", "double tap");
 	        	doubleTap = true;
 	            return true;
 	        }
 	        public boolean wasDoubleTap(){
 	        	return doubleTap;
 	        }
-	    }
+	 }
+	 
+	 //Google map functions
+	 public UiSettings getUiSettings(){
+		 return this.map.getUiSettings();
+	 }
+	public void setMyLocationEnabled(boolean enabled){
+		this.map.setMyLocationEnabled(enabled);
+	}
+	public void setMapType(int type){
+		this.map.setMapType(type);
+	}
+	public void moveCamera(CameraUpdate update){
+		this.map.moveCamera(update);
+	}
+	public Location getMyLocation(){
+		return this.map.getMyLocation();
+	}
+	public CameraPosition getCameraPosition(){
+		return this.map.getCameraPosition();
+	}
+	public Projection getProjection(){
+		return this.map.getProjection();
+	}
+	public float getMaxZoomLevel() {
+		return this.map.getMaxZoomLevel();
+	}
+	public void animateCamera(CameraUpdate update){
+		this.map.animateCamera(update);
+	}
+	public void animateCamera(CameraUpdate update, CancelableCallback callback){
+		this.map.animateCamera(update, callback);
+	}
+	public void animateCamera(CameraUpdate update, int durationMs, CancelableCallback callback){
+		this.map.animateCamera(update, durationMs, callback);
+	}
 }

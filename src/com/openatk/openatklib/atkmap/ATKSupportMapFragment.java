@@ -14,7 +14,8 @@ import com.openatk.openatklib.atkmap.listeners.ATKTouchableWrapperListener;
 public class ATKSupportMapFragment extends SupportMapFragment {
 	 public View mOriginalContentView;
 	 public ATKTouchableWrapper mTouchView;   
-	 private ATKMap map;
+	 private ATKMap map = null;
+	 private boolean retained = false;
 	 
 	 @Override
 	 public View onCreateView(LayoutInflater inflater, ViewGroup parent, Bundle savedInstanceState) {
@@ -31,13 +32,23 @@ public class ATKSupportMapFragment extends SupportMapFragment {
 	    
 	    //Add listeners for clicks on the map
 	    //mTouchView.addListener(new panListener(v));
-	    
-	    this.map = new ATKMap(this.getMap(), this.getActivity().getApplicationContext()); 
+	    if(this.map == null){
+	    	Log.d("atkSupportMapFragment - onCreateView()", "New atkmap");
+	    	//This is what makes it all save since retain instancestate is true
+	    	//Views are recreated but objects are not
+	    	this.map = new ATKMap(this.getMap(), this.getActivity().getApplicationContext()); 
+	    } else {
+	    	Log.d("atkSupportMapFragment - onCreateView()", "Reused atkmap");
+	    	retained = true;
+	    }
 	    mTouchView.addListener(this.map); //Let the atkMap listen for touch events
-	    	    
+	    	    	 
 	    return mTouchView;
 	 }
-	 
+	 	
+	 public boolean getRetained(){
+		 return this.retained;
+	 }
 	 
 	 public ATKMap getAtkMap(){
 		return this.map;
@@ -47,7 +58,6 @@ public class ATKSupportMapFragment extends SupportMapFragment {
 	 public View getView() {
 		 return mOriginalContentView;
 	 }
-	 
 	 
 	 private class panListener implements ATKTouchableWrapperListener {
 

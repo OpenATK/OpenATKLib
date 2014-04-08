@@ -27,30 +27,27 @@ import com.openatk.openatklib.atkmap.listeners.ATKPolygonClickListener;
 import com.openatk.openatklib.atkmap.models.ATKPolygon;
 
 public class ATKPolygonView {
+	//Data
 	private ATKPolygon polygon;
+	private ATKPolygonViewOptions viewOptions;
+
+	//References
 	private GoogleMap map;
-	
 	
 	private Polygon mapPolygon;
 	private Marker mapLabelMarker;
-	private String mapLabelString;
 	
 	private BitmapDescriptor iconLabel;
 	private BitmapDescriptor iconLabelSelected;
-	private boolean blnLabelSelected = false;
 
 	private PolygonOptions polygonOptions;
 	private ATKPolygonClickListener clickListener;
 	
-	private int strokeColor = Color.argb(150, 150, 150, 150);
-	private int fillColor = Color.argb(200, 200, 200, 200);
-	private float strokeWidth = 3.0f;
-	private boolean visible = true;
-	private float zindex = 1.0f;
-	
 	public ATKPolygonView(GoogleMap map, ATKPolygon polygon){
 		this.map = map;
 		this.polygon = polygon;
+		this.viewOptions = polygon.viewOptions;
+		this.setLabel(polygon.label);
 		this.drawPolygon();
 	}
 	
@@ -77,56 +74,57 @@ public class ATKPolygonView {
 	}
 	
 	public void hide(){
-		this.visible = false;
+		this.viewOptions.setVisible(false);
 		if(this.mapPolygon != null){
 			this.mapPolygon.setVisible(false);
 		}
 	}
 	
 	public void show(){
-		this.visible = false;
+		this.viewOptions.setVisible(true);
 		if(this.mapPolygon != null){
 			this.mapPolygon.setVisible(true);
 		}
 	}
 	
 	public void setStrokeColor(int color){
-		this.strokeColor = color;
-		if(this.mapPolygon != null) this.mapPolygon.setStrokeColor(this.strokeColor);
+		this.viewOptions.setStrokeColor(color);
+		if(this.mapPolygon != null) this.mapPolygon.setStrokeColor(this.viewOptions.getStrokeColor());
 	}
 	
 	public void setStrokeColor(float alpha, int red, int green, int blue){
-		this.strokeColor = Color.argb((int)(alpha * 255),  red, green, blue);
-		if(this.mapPolygon != null) this.mapPolygon.setStrokeColor(this.strokeColor);
+		this.viewOptions.setStrokeColor(Color.argb((int)(alpha * 255),  red, green, blue));
+		if(this.mapPolygon != null) this.mapPolygon.setStrokeColor(this.viewOptions.getStrokeColor());
 	}
 	
 	public void setFillColor(int color){
-		this.fillColor = color;
-		if(this.mapPolygon != null) this.mapPolygon.setFillColor(this.fillColor);
+		this.viewOptions.setFillColor(color);
+		if(this.mapPolygon != null) this.mapPolygon.setFillColor(this.viewOptions.getFillColor());
 	}
 	
 	public void setFillColor(float alpha, int red, int green, int blue){
-		this.fillColor = Color.argb((int)(alpha * 255),  red, green, blue);
-		if(this.mapPolygon != null) this.mapPolygon.setFillColor(this.fillColor);
+		this.viewOptions.setFillColor(Color.argb((int)(alpha * 255),  red, green, blue));
+		if(this.mapPolygon != null) this.mapPolygon.setFillColor(this.viewOptions.getFillColor());
 	}
 	
 	public void setStrokeWidth(float width){
-		this.strokeWidth = width;
-		if(this.mapPolygon != null) this.mapPolygon.setStrokeWidth(this.strokeWidth);
+		this.viewOptions.setStrokeWidth(width);
+		if(this.mapPolygon != null) this.mapPolygon.setStrokeWidth(this.viewOptions.getStrokeWidth());
 	}
 
 	public void setOpacity(float opacity){
-		this.fillColor = Color.argb((int)(opacity * 255), Color.red(this.fillColor), Color.green(this.fillColor), Color.blue(this.fillColor));
-		if(this.mapPolygon != null) this.mapPolygon.setFillColor(this.fillColor);
+		int fillcolor = this.viewOptions.getFillColor();
+		this.viewOptions.setFillColor(Color.argb((int)(opacity * 255), Color.red(fillcolor), Color.green(fillcolor), Color.blue(fillcolor)));
+		if(this.mapPolygon != null) this.mapPolygon.setFillColor(this.viewOptions.getFillColor());
 	}
 	
 	public void setZIndex(float zindex){
-		this.zindex = zindex;
-		if(this.mapPolygon != null) this.mapPolygon.setZIndex(this.zindex );
+		this.viewOptions.setZindex(zindex);
+		if(this.mapPolygon != null) this.mapPolygon.setZIndex(this.viewOptions.getZindex());
 	}
 	
 	public float getZIndex(){
-		return this.zindex;
+		return this.viewOptions.getZindex();
 	}
 	
 	public boolean wasClicked(Point point){ //TODO protected?
@@ -140,7 +138,6 @@ public class ATKPolygonView {
 			pointsBoundary.add(aPoint);
 		}
 		if(isPointInPolygon(point, pointsBoundary)){
-			Log.d("ATKPolygonView","Point is in poly");
 			return true;
 		}
 		return false;
@@ -155,7 +152,7 @@ public class ATKPolygonView {
 	public boolean click(){ //TODO protected?
 		//Returns true or false depending if listener consumed the click event		
 		if(this.clickListener != null){
-			return this.clickListener.onClick(this); //Return if we consumed the click
+			return this.clickListener.onPolygonClick(this); //Return if we consumed the click
 		}
 		return false;
 	}
@@ -168,25 +165,21 @@ public class ATKPolygonView {
 	}
 	
 	private void drawPolygon(){
-		Log.d("atkPolygonView", "drawPolygon");
 		if(this.polygon.boundary != null && this.polygon.boundary.size() > 0){
 			if(this.mapPolygon == null){
-				Log.d("atkPolygonView", "Creating polygon");
 				//Setup options
 				this.polygonOptions = new PolygonOptions();			
 				this.polygonOptions.addAll(polygon.boundary);
-				this.polygonOptions.strokeColor(this.strokeColor);
-				this.polygonOptions.strokeWidth(this.strokeWidth);
-				this.polygonOptions.fillColor(this.fillColor);
-				this.polygonOptions.visible(this.visible);
-				this.polygonOptions.zIndex(this.zindex);
+				this.polygonOptions.strokeColor(this.viewOptions.getStrokeColor());
+				this.polygonOptions.strokeWidth(this.viewOptions.getStrokeWidth());
+				this.polygonOptions.fillColor(this.viewOptions.getFillColor());
+				this.polygonOptions.visible(this.viewOptions.isVisible());
+				this.polygonOptions.zIndex(this.viewOptions.getZindex());
 				this.mapPolygon = map.addPolygon(this.polygonOptions);
 			} else {
-				Log.d("atkPolygonView", "Updating # points:" + Integer.toString(this.polygon.boundary.size()));
 				this.mapPolygon.setPoints(this.polygon.boundary);
 			}
 		} else {
-			Log.d("atkPolygonView", "removing");
 			//Model doesn't have a boundary remove the polygon from the map
 			if(this.mapPolygon != null) this.mapPolygon.remove();
 			this.mapPolygon = null;
@@ -195,7 +188,7 @@ public class ATKPolygonView {
 	}
 	
 	private void drawLabel(){
-		if(this.mapLabelString != null && this.mapLabelString.length() > 0 && this.iconLabel != null && this.iconLabelSelected != null && this.polygon.boundary != null && this.polygon.boundary.size() > 2){
+		if(this.polygon.label != null && this.polygon.label.length() > 0 && this.iconLabel != null && this.iconLabelSelected != null && this.polygon.boundary != null && this.polygon.boundary.size() > 2){
 			LatLngBounds.Builder builder = new LatLngBounds.Builder();
 			for (int i = 0; i < polygon.boundary.size(); i++) {
 				builder.include(polygon.boundary.get(i));
@@ -205,7 +198,7 @@ public class ATKPolygonView {
 			LatLng where = midPoint(boundingBox.northeast, boundingBox.southwest);
 
 			BitmapDescriptor icon;
-			if(this.blnLabelSelected == true){
+			if(this.viewOptions.isBlnLabelSelected() == true){
 				icon = this.iconLabelSelected;
 			} else {
 				icon = this.iconLabel;
@@ -227,8 +220,8 @@ public class ATKPolygonView {
 		this.setLabel(label, false);
 	}
 	public void setLabel(String label, Boolean selected){
-		this.mapLabelString = label;
-		this.blnLabelSelected = selected;
+		this.polygon.label = label;
+		this.viewOptions.setBlnLabelSelected(selected);
 		
 		if(label == null || label.length() == 0){
 			this.drawLabel();
@@ -263,12 +256,12 @@ public class ATKPolygonView {
 	}
 
 	public void setLabelSelected(boolean selected){
-		this.blnLabelSelected = selected;
+		this.viewOptions.setBlnLabelSelected(selected);
 		this.drawLabel();
 	}
 	
 	public String getLabel(){
-		return this.mapLabelString;
+		return this.polygon.label;
 	}
 
 	private boolean isPointInPolygon(Point tap, List<Point> vertices) {
@@ -279,7 +272,6 @@ public class ATKPolygonView {
 			return false;
 		}
 		for (int j = 0; j < vertices.size() - 1; j++) {
-			Log.d("j:",Integer.toString(j));
 			if (rayCastIntersect(tap, vertices.get(j), vertices.get(j + 1))) {
 				intersectCount++;
 			}

@@ -4,5 +4,5 @@ import com.google.android.gms.maps.model.LatLng;
 
 
 public interface ATKMapClickListener {
-	public void onClick(LatLng position);
+	public void onMapClick(LatLng position);
 }

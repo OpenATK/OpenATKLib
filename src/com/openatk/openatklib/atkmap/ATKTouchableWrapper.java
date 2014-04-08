@@ -30,4 +30,6 @@ public class ATKTouchableWrapper extends FrameLayout {
 		}		
 		return super.dispatchTouchEvent(event);
 	}
+	
+	
 }
