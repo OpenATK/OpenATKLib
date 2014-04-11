@@ -1,7 +1,9 @@
 package com.openatk.openatklib.atkmap;
 
 
+import android.content.IntentFilter;
 import android.os.Bundle;
+import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -25,7 +27,7 @@ public class ATKSupportMapFragment extends SupportMapFragment {
 	    Log.d("atkSupportMapFragment", "onCreateView()");
 	    //LayoutInflater vi = (LayoutInflater) this.getActivity().getApplicationContext().getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 	    //View v = vi.inflate(R.layout.pan_button, null);
-	    
+
 	    mTouchView = new ATKTouchableWrapper(getActivity());
 	    mTouchView.addView(mOriginalContentView);
 	    //mTouchView.addView(v);

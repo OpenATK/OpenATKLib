@@ -36,6 +36,7 @@ import com.openatk.openatklib.atkmap.listeners.ATKMapClickListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPointClickListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPointDragListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPolygonClickListener;
+import com.openatk.openatklib.atkmap.listeners.ATKPolygonDrawListener;
 import com.openatk.openatklib.atkmap.listeners.ATKPolylineClickListener;
 import com.openatk.openatklib.atkmap.listeners.ATKTouchableWrapperListener;
 import com.openatk.openatklib.atkmap.models.ATKPoint;
@@ -52,6 +53,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	private ATKPointDragListener atkPointDragListener;
 
 	private ATKPolygonClickListener atkPolygonClickListener;
+	private ATKPolygonDrawListener atkPolygonDrawListener;
+	
 	private ATKPolylineClickListener atkPolylineClickListener;
 	private ATKDrawListener atkDrawListener;
 	
@@ -194,6 +197,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.atkPolygonClickListener = listener;
 	}
 	
+	public void setOnPolygonDrawListener(ATKPolygonDrawListener listener){
+		this.atkPolygonDrawListener = listener;
+	}
+	
 	public ATKPointView addPoint(ATKPoint point){
 		ATKPointView pointView = new ATKPointView(map,point);
 		this.points.add(pointView);
@@ -265,7 +272,21 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		return this.points;
 	}
 	
+	public void drawPolygon(ATKPolygonView polygon){
+		this.drawPolygon(polygon, null);
+	}
+	public void drawPolygon(ATKPolygonView polygon, ATKPolygonDrawListener listener){
+		//Edit an existing atkPolygon
+		this.polygonDrawing = polygon;
+		this.polygonDrawing.setFillColor(colorFillPolygonDrawing);
+		this.polygonDrawing.setStrokeColor(colorStrokePolygonDrawing);
+		this.polygonDrawing.setOnDrawListener(listener);
+		this.isDrawingPolygon = true;
+	}
 	public ATKPolygonView drawPolygon(Object atkPolygonId){
+		return this.drawPolygon(atkPolygonId, null);
+	}
+	public ATKPolygonView drawPolygon(Object atkPolygonId, ATKPolygonDrawListener listener){
 		//atkPolygon id needs to be unique
 		//Set to draw mode
 		ATKPolygon newPoly = new ATKPolygon(atkPolygonId);
@@ -274,6 +295,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.polygonDrawing = new ATKPolygonView(map, newPoly);
 		this.polygonDrawing.setFillColor(colorFillPolygonDrawing);
 		this.polygonDrawing.setStrokeColor(colorStrokePolygonDrawing);
+		this.polygonDrawing.setOnDrawListener(listener);
 		this.isDrawingPolygon = true;
 		return this.polygonDrawing;
 	}
@@ -310,7 +332,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 					}
 				}
 				if(clickedPoint != null){
-					//Select this point
+					//Unselect old point
 					if(pointSelectedPolylineDrawing != null){
 						pointSelectedPolylineDrawing.setIcon(iconPointPolylineDrawing, PointPolylineDrawingWidth, PointPolylineDrawingHeight);
 						pointSelectedPolylineDrawing.setAnchor(anchorUPointPolylineDrawing, anchorVPointPolylineDrawing);
@@ -320,6 +342,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 						pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing, PointPolygonDrawingWidth, PointPolygonDrawingHeight);
 						pointSelectedPolygonDrawing.setAnchor(anchorUPointPolygonDrawing, anchorVPointPolygonDrawing);
 					}
+					//Select this point
 					pointSelectedPolygonDrawing = clickedPoint;
 					clickedPoint.setIcon(iconPointSelectedPolygonDrawing, PointSelectedPolygonDrawingWidth, PointSelectedPolygonDrawingHeight);
 					clickedPoint.setAnchor(anchorUPointSelectedPolygonDrawing, anchorVPointSelectedPolygonDrawing);
@@ -337,9 +360,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 					}
 				}
 				if(clickedPoint != null){
-					//Select this point
+					//Unselect old point
 					if(pointSelectedPolylineDrawing != null) pointSelectedPolylineDrawing.setIcon(iconPointPolylineDrawing, PointPolylineDrawingWidth, PointPolylineDrawingHeight);
 					if(pointSelectedPolygonDrawing != null) pointSelectedPolygonDrawing.setIcon(iconPointPolygonDrawing, PointPolygonDrawingWidth, PointPolygonDrawingHeight);
+					//Select this point
 					pointSelectedPolylineDrawing = clickedPoint;
 					clickedPoint.setIcon(iconPointSelectedPolylineDrawing, PointSelectedPolylineDrawingWidth, PointSelectedPolylineDrawingHeight);
 				}
@@ -403,6 +427,13 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				//Add a point to the polygon's model that we are currently drawing				
 				polygonDrawing.getAtkPolygon().boundary.add(selectedPointIndex, position); //Update its model
 				polygonDrawing.update(); //Tell it to refresh its view
+				boolean consumed = false;
+				if(polygonDrawing.getOnDrawListener() != null) {
+					consumed = polygonDrawing.getOnDrawListener().onBoundaryChange(polygonDrawing);
+				}
+				if(consumed == false && atkPolygonDrawListener != null){
+					atkPolygonDrawListener.onBoundaryChange(polygonDrawing);
+				}
 			}
 
 			//Check if polygon was clicked
@@ -482,6 +513,15 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			}
 			this.polygonDrawing.getAtkPolygon().boundary = newBoundary;
 			this.polygonDrawing.update();
+			
+			boolean consumed = false;
+			if(polygonDrawing.getOnDrawListener() != null) {
+				consumed = polygonDrawing.getOnDrawListener().onBoundaryChange(polygonDrawing);
+			}
+			if(consumed == false && atkPolygonDrawListener != null){
+				atkPolygonDrawListener.onBoundaryChange(polygonDrawing);
+			}
+			
 			return true;
 		} else if(this.isDrawingPolygon && isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_UP){
 			//Stop dragging polygons selected point

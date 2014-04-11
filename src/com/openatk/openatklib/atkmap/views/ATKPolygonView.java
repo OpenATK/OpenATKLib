@@ -24,6 +24,7 @@ import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.maps.model.Polygon;
 import com.google.android.gms.maps.model.PolygonOptions;
 import com.openatk.openatklib.atkmap.listeners.ATKPolygonClickListener;
+import com.openatk.openatklib.atkmap.listeners.ATKPolygonDrawListener;
 import com.openatk.openatklib.atkmap.models.ATKPolygon;
 
 public class ATKPolygonView {
@@ -42,6 +43,8 @@ public class ATKPolygonView {
 
 	private PolygonOptions polygonOptions;
 	private ATKPolygonClickListener clickListener;
+	private ATKPolygonDrawListener drawListener;
+
 	
 	public ATKPolygonView(GoogleMap map, ATKPolygon polygon){
 		this.map = map;
@@ -53,6 +56,14 @@ public class ATKPolygonView {
 	
 	public void setOnClickListener(ATKPolygonClickListener clickListener){
 		this.clickListener = clickListener;
+	}
+	
+	public void setOnDrawListener(ATKPolygonDrawListener drawListener){ //protected?
+		this.drawListener = drawListener;
+	}
+	
+	public ATKPolygonDrawListener getOnDrawListener(){ //protected?
+		return this.drawListener;
 	}
 	
 	public ATKPolygon getAtkPolygon(){
@@ -243,10 +254,12 @@ public class ATKPolygonView {
 		float y = -1.0f * bounds.top + (bitmap.getHeight() * 0.06f);
 				
 		Canvas canvas = new Canvas(bitmap);
+		paint.setColor(this.viewOptions.getLabelSelectedColor());
+
 		canvas.drawText(label, x, y, paint);
 		
 		canvas = new Canvas(bitmapSelected);
-		paint.setColor(Color.WHITE);
+		paint.setColor(this.viewOptions.getLabelSelectedColor());
 		paint.setShadowLayer(1f, 0f, 1f, Color.DKGRAY);
 		canvas.drawText(label, x, y, paint);
 		
@@ -257,6 +270,24 @@ public class ATKPolygonView {
 
 	public void setLabelSelected(boolean selected){
 		this.viewOptions.setBlnLabelSelected(selected);
+		this.drawLabel();
+	}
+	
+	public void setLabelColor(int color){
+		this.viewOptions.setLabelColor(color);
+		this.drawLabel();
+	}
+	public void setLabelColor(float alpha, int red, int green, int blue){
+		this.viewOptions.setLabelColor(Color.argb((int)(alpha * 255),  red, green, blue));
+		this.drawLabel();
+	}
+	
+	public void setLabelSelectedColor(int color){
+		this.viewOptions.setLabelSelectedColor(color);
+		this.drawLabel();
+	}
+	public void setLabelSelectedColor(float alpha, int red, int green, int blue){
+		this.viewOptions.setLabelSelectedColor(Color.argb((int)(alpha * 255),  red, green, blue));
 		this.drawLabel();
 	}
 	

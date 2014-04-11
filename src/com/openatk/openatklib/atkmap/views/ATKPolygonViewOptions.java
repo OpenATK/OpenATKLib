@@ -9,6 +9,9 @@ public class ATKPolygonViewOptions {
 	private float strokeWidth;
 	private boolean visible;
 	private float zindex;
+	private int labelColor;
+	private int labelSelectedColor;
+
 	private boolean blnLabelSelected;
 	
 	public ATKPolygonViewOptions(){
@@ -17,6 +20,8 @@ public class ATKPolygonViewOptions {
 		strokeWidth = 3.0f;
 		visible = true;
 		zindex = 1.0f;
+		labelColor = Color.BLACK;
+		labelSelectedColor = Color.WHITE;
 		blnLabelSelected = false;
 	}
 	
@@ -55,6 +60,18 @@ public class ATKPolygonViewOptions {
 	}
 	public void setBlnLabelSelected(boolean blnLabelSelected) {
 		this.blnLabelSelected = blnLabelSelected;
+	}
+	public int getLabelColor() {
+		return labelColor;
+	}
+	public void setLabelColor(int labelColor) {
+		this.labelColor = labelColor;
+	}
+	public int getLabelSelectedColor() {
+		return labelSelectedColor;
+	}
+	public void setLabelSelectedColor(int labelSelectedColor) {
+		this.labelSelectedColor = labelSelectedColor;
 	}	
 	
 }
