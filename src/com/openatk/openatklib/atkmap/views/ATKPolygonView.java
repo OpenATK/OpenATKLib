@@ -45,6 +45,10 @@ public class ATKPolygonView {
 	private ATKPolygonClickListener clickListener;
 	private ATKPolygonDrawListener drawListener;
 
+	private Object userData;
+	
+	private String currentLabel;
+
 	
 	public ATKPolygonView(GoogleMap map, ATKPolygon polygon){
 		this.map = map;
@@ -200,6 +204,8 @@ public class ATKPolygonView {
 	
 	private void drawLabel(){
 		if(this.polygon.label != null && this.polygon.label.length() > 0 && this.iconLabel != null && this.iconLabelSelected != null && this.polygon.boundary != null && this.polygon.boundary.size() > 2){
+			if(this.currentLabel.contentEquals(this.polygon.label) == false) setLabel(this.polygon.label);
+			
 			LatLngBounds.Builder builder = new LatLngBounds.Builder();
 			for (int i = 0; i < polygon.boundary.size(); i++) {
 				builder.include(polygon.boundary.get(i));
@@ -231,6 +237,7 @@ public class ATKPolygonView {
 		this.setLabel(label, false);
 	}
 	public void setLabel(String label, Boolean selected){
+		this.currentLabel = label;
 		this.polygon.label = label;
 		this.viewOptions.setBlnLabelSelected(selected);
 		
@@ -295,6 +302,14 @@ public class ATKPolygonView {
 		return this.polygon.label;
 	}
 
+	public void setData(Object data){
+		this.userData = data;
+	}
+	
+	public Object getData(){
+		return this.userData;
+	}
+	
 	private boolean isPointInPolygon(Point tap, List<Point> vertices) {
 		int intersectCount = 0;
 		if(vertices.size() > 2){
@@ -353,4 +368,6 @@ public class ATKPolygonView {
 	    
 	    return(new LatLng(Math.toDegrees(lat3), Math.toDegrees(lon3)));
 	}
+	
+
 }

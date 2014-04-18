@@ -2,6 +2,8 @@ package com.openatk.openatklib.layouts;
 
 import android.content.Context;
 import android.content.res.TypedArray;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -16,12 +18,13 @@ import com.openatk.openatklib.R;
 
 public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 	
-	public static int SIZE_FULLSCREEN;
-	public static int SIZE_OPEN;
-	public static int SIZE_CLOSED;
+	public static int SIZE_FULLSCREEN = 3;
+	public static int SIZE_OPEN = 2;
+	public static int SIZE_CLOSED = 1;
+	public static int SIZE_HIDDEN = 0;
 
 	//For sliding
-	private int sliderPosition = 0;
+	private int sliderPosition = SIZE_CLOSED;
 	private int maxHeight;
 	private int middleHeight;
 	private int tabHeight = 0;
@@ -31,7 +34,7 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 	private int hSpacing;
 	private int vSpacing;
 	private int currentHeight;
-	
+		
 	public ATKSliderLayout(Context context) {
 		super(context);
 		// From code
@@ -103,9 +106,61 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 			LayoutParams lp = (LayoutParams) child.getLayoutParams();
 
 			child.layout(lp.x, lp.y, lp.x + child.getMeasuredWidth(), lp.y + child.getMeasuredHeight());
-		}
+		}	    
 	}
 
+	
+	
+	@Override
+	protected void onRestoreInstanceState(Parcelable state) {
+		if(!(state instanceof SavedState)) {
+			super.onRestoreInstanceState(state);
+			return;
+	    }
+	    SavedState ss = (SavedState)state;
+	    super.onRestoreInstanceState(ss.getSuperState());
+	    this.sliderPosition = ss.sliderPosition;
+    	this.setSize(this.sliderPosition, false);
+	}
+
+	@Override
+	protected Parcelable onSaveInstanceState() {
+		Parcelable superState = super.onSaveInstanceState();
+		SavedState ss = new SavedState(superState);
+		ss.sliderPosition = this.sliderPosition;
+		return ss;
+	}
+
+	static class SavedState extends BaseSavedState {
+		   int sliderPosition;
+
+		    SavedState(Parcelable superState) {
+		      super(superState);
+		    }
+
+		    private SavedState(Parcel in) {
+		      super(in);
+		      this.sliderPosition = in.readInt();
+		    }
+
+		    @Override
+		    public void writeToParcel(Parcel out, int flags) {
+		      super.writeToParcel(out, flags);
+		      out.writeInt(this.sliderPosition);
+		    }
+
+		    //required field that makes Parcelables from a Parcel
+		    public static final Parcelable.Creator<SavedState> CREATOR =
+		        new Parcelable.Creator<SavedState>() {
+		          public SavedState createFromParcel(Parcel in) {
+		            return new SavedState(in);
+		          }
+		          public SavedState[] newArray(int size) {
+		            return new SavedState[size];
+		          }
+		    };
+		  }
+	
 	@Override
 	protected boolean checkLayoutParams(ViewGroup.LayoutParams p) {
 		return p instanceof LayoutParams;
@@ -154,25 +209,27 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 		setSize(size, true);
 	}
 	public void setSize(int size, boolean animate){
-		if(size != ATKSliderLayout.SIZE_OPEN && size != ATKSliderLayout.SIZE_CLOSED && size != ATKSliderLayout.SIZE_FULLSCREEN){
+		Log.d("ATKSliderLayout", "SetSize:" + Integer.toString(size));
+		if(size != ATKSliderLayout.SIZE_OPEN && size != ATKSliderLayout.SIZE_CLOSED && size != ATKSliderLayout.SIZE_FULLSCREEN && size != ATKSliderLayout.SIZE_HIDDEN){
 			Log.e("ATKSlider", "Invaild size given for ATKSliderLayout.setSize()");
 		} else {
-			int newHeight = 0;
-			if(size == SIZE_OPEN){
-				newHeight = middleHeight;
-				sliderPosition = 0;
-			} else if (size == SIZE_CLOSED){
+			int newHeight = 0; //SIZE_HIDDEN
+			if(size == SIZE_CLOSED){
 				newHeight = tabHeight;
-				sliderPosition = 2;
+			} else if (size == SIZE_OPEN){
+				newHeight = middleHeight;
 			} else if(size == SIZE_FULLSCREEN) {
 				newHeight = maxHeight;
-				sliderPosition = 3;
 			}
+			sliderPosition = size;
+
 			RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) this.getLayoutParams();
 			if(animate){
 				DropDownAnim an = new DropDownAnim(this, params.height, newHeight);
 				an.setDuration(300);
 				this.startAnimation(an);
+			} else {
+				params.height = newHeight;
 			}
 			this.setLayoutParams(params);
 			this.currentHeight = params.height - tabHeight;
@@ -226,49 +283,23 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 		}
 	}
 	private void SliderShrink() {
-		RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) this.getLayoutParams();
-		if (sliderPosition == 2 || sliderPosition == 1) {
-			// Middle -> Small
-			DropDownAnim an = new DropDownAnim(this, params.height, tabHeight);
-			an.setDuration(300);
-			this.startAnimation(an);
-			sliderPosition = 0;
-		} else if (sliderPosition == 3) {
-			// Fullscreen -> Middle if has notes
-			// Fullscreen -> Small if no notes
-			if (true) {
-				DropDownAnim an = new DropDownAnim(this, params.height, middleHeight);
-				an.setDuration(300);
-				this.startAnimation(an);
-				sliderPosition = 2;
-			} else {
-				DropDownAnim an = new DropDownAnim(this, params.height, 0);
-				an.setDuration(300);
-				this.startAnimation(an);
-				sliderPosition = 0;
-			}
+		if (sliderPosition == SIZE_OPEN) {
+			// Open -> Closed
+			this.setSize(SIZE_CLOSED);
+		} else if (sliderPosition == SIZE_FULLSCREEN) {
+			// Fullscreen -> Open
+			this.setSize(SIZE_OPEN);
 		}
-		this.setLayoutParams(params);
-		this.currentHeight = params.height - tabHeight;
 	}
 
 	private void SliderGrow() {
-		RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) this.getLayoutParams();
-		if (sliderPosition == 0 || sliderPosition == 1) {
-			// Small -> Middle
-			DropDownAnim an = new DropDownAnim(this, params.height, middleHeight);
-			an.setDuration(300);
-			this.startAnimation(an);
-			sliderPosition = 2;
-		} else if (sliderPosition == 2) {
-			// Middle -> Fullscreen
-			DropDownAnim an = new DropDownAnim(this, params.height, maxHeight);
-			an.setDuration(300);
-			this.startAnimation(an);
-			sliderPosition = 3;
+		if (sliderPosition == SIZE_CLOSED) {
+			// Closed -> Open
+			this.setSize(SIZE_OPEN);
+		} else if (sliderPosition == SIZE_OPEN) {
+			// Open -> Fullscreen
+			this.setSize(SIZE_FULLSCREEN);
 		}
-		this.setLayoutParams(params);
-		this.currentHeight = params.height - tabHeight;
 	}
 	private class DropDownAnim extends Animation {
 		int targetHeight;
