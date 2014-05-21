@@ -12,6 +12,7 @@ import android.graphics.Paint.Align;
 import android.graphics.Point;
 import android.graphics.Rect;
 import android.util.Log;
+import android.util.Pair;
 
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.Projection;
@@ -84,8 +85,14 @@ public class ATKPolygonView {
 	}
 	
 	public void remove(){
-		this.mapPolygon.remove();
-		this.mapPolygon = null;
+		if(this.mapLabelMarker != null) {
+			this.mapLabelMarker.remove();
+			this.mapLabelMarker = null;
+		}
+		if(this.mapPolygon != null){
+			this.mapPolygon.remove();
+			this.mapPolygon = null;
+		}
 	}
 	
 	public void hide(){
@@ -261,7 +268,7 @@ public class ATKPolygonView {
 		float y = -1.0f * bounds.top + (bitmap.getHeight() * 0.06f);
 				
 		Canvas canvas = new Canvas(bitmap);
-		paint.setColor(this.viewOptions.getLabelSelectedColor());
+		paint.setColor(this.viewOptions.getLabelColor());
 
 		canvas.drawText(label, x, y, paint);
 		
@@ -369,5 +376,45 @@ public class ATKPolygonView {
 	    return(new LatLng(Math.toDegrees(lat3), Math.toDegrees(lon3)));
 	}
 	
+	
+	
+	public float getAcres(){		
+		if(this.polygon.boundary.size() < 3) return 0.0f;
+		
+		Float newArea = 0.0f;
+		List<Pair<Double, Double>> xyList = new ArrayList<Pair<Double, Double>>();
+		for (int i = 0; i < this.polygon.boundary.size(); i++) {
+			//Reproject
+			double earth_radius = (double) 6371009.0f; // in meters
+			double lat_dist = (double) ((Math.PI * earth_radius) / (double) 180.0f);
+			double y = this.polygon.boundary.get(i).latitude * lat_dist;
+			double x = this.polygon.boundary.get(i).longitude * lat_dist * Math.cos(Math.toRadians(this.polygon.boundary.get(i).longitude));
+			//Save x, y
+			xyList.add(new Pair<Double, Double>(x,y));
+		}
+
+		boolean haveRef = false;
+		double refX = 0.0f;
+		double refY = 0.0f;
+		double total1 = 0.0f;
+		double total2 = 0.0f;
+		for(int i = 0; i < (xyList.size()-1); i++){
+			Pair<Double, Double> thisVert = xyList.get(i);
+			Pair<Double, Double> nextVert = xyList.get(i+1);
+
+			if(haveRef == false){
+				haveRef = true;
+				refX = thisVert.first;
+				refY = thisVert.second;
+			}
+			total1 += ((thisVert.first - refX) * (nextVert.second - refY)); // x(i) * y(i+1)
+			total2 += ((thisVert.second - refY) * (nextVert.first - refX)); // y(i) * x(i+1)
+		}
+
+		newArea = (float) (total1 - total2);
+		newArea = Math.abs(newArea) / (2.0f * 4046.68f);
+		
+		return newArea;
+	}
 
 }

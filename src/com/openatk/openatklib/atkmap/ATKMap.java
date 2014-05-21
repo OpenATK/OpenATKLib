@@ -201,6 +201,18 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.atkPolygonDrawListener = listener;
 	}
 	
+	public void clear(){
+		this.map.clear();
+		this.polygons.clear();
+		this.polylines.clear();
+		this.points.clear();
+		this.pointsPolygonDrawing.clear();
+		this.pointsPolylineDrawing.clear();
+		this.isDrawingPolygon = false;
+		this.isDrawingPolyline = false;
+		this.isDraggingPoint = false;
+	}
+	
 	public ATKPointView addPoint(ATKPoint point){
 		ATKPointView pointView = new ATKPointView(map,point);
 		this.points.add(pointView);
@@ -209,6 +221,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	public ATKPolygonView addPolygon(ATKPolygon polygon){
 		ATKPolygonView polygonView = new ATKPolygonView(map, polygon);
 		this.polygons.add(polygonView);
+		Log.d("ATKMAP", "poly added:" + this.polygons.size());
 		return polygonView;
 	}
 	
@@ -233,6 +246,30 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		}
 		return false;
 	}
+	public boolean removePolygon(ATKPolygon polygon){
+		if(polygon.id == null) return false;
+		for(int i=0; i<polygons.size(); i++){
+			if(polygons.get(i).getAtkPolygon().id.equals(polygon.id)){
+				polygons.get(i).remove();
+				polygons.remove(i);
+				return true;
+			}
+		}
+		return false;
+	}
+	public boolean removePoint(ATKPoint point){
+		if(point.id == null) return false;
+		for(int i=0; i<points.size(); i++){
+			ATKPointView pointView = points.get(i);
+			if(pointView.getAtkPoint().id.equals(point.id)){
+				pointView.remove();
+				points.remove(i);
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	public ATKPolygonView getPolygonView(Object atkPolygonId){
 		if(atkPolygonId == null) return null;
 		for(int i=0; i<polygons.size(); i++){
@@ -282,6 +319,24 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.polygonDrawing.setStrokeColor(colorStrokePolygonDrawing);
 		this.polygonDrawing.setOnDrawListener(listener);
 		this.isDrawingPolygon = true;
+		//Add points for all vertexes of polygon
+		List<LatLng> boundary = this.polygonDrawing.getAtkPolygon().boundary;
+		for(int i=0; i<boundary.size(); i++){
+			ATKPoint point = new ATKPoint(nextPointId); //Don't init with position so it won't draw yet
+			nextPointId++;
+			ATKPointView pointView = new ATKPointView(map, point);
+			if(i==boundary.size()-1){
+				pointView.setIcon(iconPointSelectedPolygonDrawing, PointSelectedPolygonDrawingHeight, PointSelectedPolygonDrawingWidth);
+				pointView.setAnchor(anchorUPointPolygonDrawing, anchorVPointPolygonDrawing);
+				pointSelectedPolygonDrawing = pointView;
+			} else {
+				pointView.setIcon(iconPointPolygonDrawing, PointPolygonDrawingHeight, PointPolygonDrawingWidth);
+				pointView.setAnchor(anchorUPointPolygonDrawing, anchorVPointPolygonDrawing);
+			}
+			point.position = boundary.get(i); //Set position of model
+			pointView.update(); //Tell pointView to refresh its view
+			pointsPolygonDrawing.add(pointView);
+		}
 	}
 	public ATKPolygonView drawPolygon(Object atkPolygonId){
 		return this.drawPolygon(atkPolygonId, null);
@@ -296,7 +351,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.polygonDrawing.setFillColor(colorFillPolygonDrawing);
 		this.polygonDrawing.setStrokeColor(colorStrokePolygonDrawing);
 		this.polygonDrawing.setOnDrawListener(listener);
-		this.isDrawingPolygon = true;
+		this.isDrawingPolygon = true;//Add if not already there
+		if(this.getPolygonView(atkPolygonId) == null){
+			this.polygons.add(this.polygonDrawing);
+		}
 		return this.polygonDrawing;
 	}
 	public ATKPolygonView completePolygon(){
@@ -311,7 +369,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			iter.remove(); //Remove from list
 		}
 		ATKPolygonView toReturn = this.polygonDrawing;
-		this.polygons.add(this.polygonDrawing);
+		//Add if not already there
+		if(this.getPolygonView(this.polygonDrawing.getAtkPolygon().id) == null){
+			this.polygons.add(this.polygonDrawing);
+		}
 		this.polygonDrawing = null;
 		this.pointSelectedPolygonDrawing = null;
 		this.isDrawingPolygon = false;
@@ -406,6 +467,18 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			//Google map was clicked
 			if(isDrawingPolygon == true){
 				//We are drawing a polygon
+				
+				//Check if we want to allow change
+				boolean allow = true;
+				if(polygonDrawing.getOnDrawListener() != null) {
+					allow = polygonDrawing.getOnDrawListener().beforeBoundaryChange(polygonDrawing);
+				}
+				if(allow == true && atkPolygonDrawListener != null){
+					atkPolygonDrawListener.beforeBoundaryChange(polygonDrawing);
+				}
+				
+				if(allow == false) return;
+				
 				//Add a point to the map to represent the vertex
 				int selectedPointIndex = 0;
 				if(pointSelectedPolygonDrawing != null) {
@@ -429,11 +502,13 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				polygonDrawing.update(); //Tell it to refresh its view
 				boolean consumed = false;
 				if(polygonDrawing.getOnDrawListener() != null) {
-					consumed = polygonDrawing.getOnDrawListener().onBoundaryChange(polygonDrawing);
+					consumed = polygonDrawing.getOnDrawListener().afterBoundaryChange(polygonDrawing);
 				}
 				if(consumed == false && atkPolygonDrawListener != null){
-					atkPolygonDrawListener.onBoundaryChange(polygonDrawing);
+					atkPolygonDrawListener.afterBoundaryChange(polygonDrawing);
 				}
+				
+				return; //We don't want polygons or anything to be clicked while we are drawing.
 			}
 
 			//Check if polygon was clicked
@@ -516,10 +591,10 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			
 			boolean consumed = false;
 			if(polygonDrawing.getOnDrawListener() != null) {
-				consumed = polygonDrawing.getOnDrawListener().onBoundaryChange(polygonDrawing);
+				consumed = polygonDrawing.getOnDrawListener().afterBoundaryChange(polygonDrawing);
 			}
 			if(consumed == false && atkPolygonDrawListener != null){
-				atkPolygonDrawListener.onBoundaryChange(polygonDrawing);
+				atkPolygonDrawListener.afterBoundaryChange(polygonDrawing);
 			}
 			
 			return true;
@@ -583,7 +658,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		
 		
 		
-		//Regular map stuff (We need to handle all causes here, not split between drawing and not drawing)
+		//TODO Regular map stuff (We need to handle all causes here, not split between drawing and not drawing)
 		if(this.isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_MOVE){
 			//During dragging
 			Point thePoint = new Point((int)event.getX() + this.draggingStartX, (int)event.getY() + this.draggingStartY);
