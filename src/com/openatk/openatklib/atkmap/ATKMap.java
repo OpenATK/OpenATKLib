@@ -27,6 +27,7 @@ import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.CameraPosition;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -57,7 +58,6 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	
 	private ATKPolylineClickListener atkPolylineClickListener;
 	private ATKDrawListener atkDrawListener;
-	
 	
 	//Static variables, ie. drawing options
 	int colorFillPolygonDrawing = Color.argb(100, 191, 0, 136);
@@ -378,6 +378,62 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.isDrawingPolygon = false;
 		return toReturn;
 	}
+	public boolean zoomTo(ATKPolygon polygon){
+		return this.zoomTo(polygon, true);
+	}
+	public boolean zoomTo(ATKPolygon polygon , boolean animate){
+		if(polygon == null || polygon.boundary == null || polygon.boundary.size() < 2) return false;
+		LatLngBounds.Builder builder = new LatLngBounds.Builder();
+		for(int i=0; i<polygon.boundary.size(); i++){
+			builder.include(polygon.boundary.get(i));
+		}
+		if(animate){
+			map.animateCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 10));
+		} else {
+			map.moveCamera(CameraUpdateFactory.newLatLngBounds(builder.build(), 10));
+		}
+		return false;
+	}
+	public void drawUndo(){
+		if(this.isDrawingPolygon == false && this.isDrawingPolyline == false) return;
+		
+		if(this.isDrawingPolygon == true){
+			//Undo last added point
+			Integer index = null;				
+			if(pointSelectedPolygonDrawing != null) index = pointsPolygonDrawing.indexOf(pointSelectedPolygonDrawing);
+			if(index != null){
+				this.pointsPolygonDrawing.remove(index.intValue());
+
+				pointSelectedPolygonDrawing.remove();
+				//Remove a point to the polygon's model that we are currently drawing				
+				polygonDrawing.getAtkPolygon().boundary.remove(index.intValue()); //Update its model
+				polygonDrawing.update(); //Tell it to refresh its view
+				
+				//Select another point if there is any
+				if(this.pointsPolygonDrawing.size() > 0){
+					if(index >= this.pointsPolygonDrawing.size()){
+						index = 0;
+					}
+					pointSelectedPolygonDrawing = this.pointsPolygonDrawing.get(index);
+					pointSelectedPolygonDrawing.setIcon(iconPointSelectedPolygonDrawing, PointSelectedPolygonDrawingWidth, PointSelectedPolygonDrawingHeight);
+					pointSelectedPolygonDrawing.setAnchor(anchorUPointSelectedPolygonDrawing, anchorVPointSelectedPolygonDrawing);
+				} else {
+					pointSelectedPolygonDrawing = null;
+				}
+				
+				boolean consumed = false;
+				if(polygonDrawing.getOnDrawListener() != null) {
+					consumed = polygonDrawing.getOnDrawListener().afterBoundaryChange(polygonDrawing);
+				}
+				if(consumed == false && atkPolygonDrawListener != null){
+					atkPolygonDrawListener.afterBoundaryChange(polygonDrawing);
+				}
+			}
+		} else {
+			//Drawing polyline
+			Log.w("ATKMap", "Need to implement undo for polyline drawing...");
+		}
+	}
 	private class GoogleMarkerClickListener implements OnMarkerClickListener {
 		@Override
 		public boolean onMarkerClick(Marker marker) {
@@ -654,9 +710,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 				//Consume the double tap
 				return false;
 			}
-		}
-		
-		
+		}		
 		
 		//TODO Regular map stuff (We need to handle all causes here, not split between drawing and not drawing)
 		if(this.isDraggingPoint && event.getActionIndex() == 0 && event.getAction() == MotionEvent.ACTION_MOVE){
