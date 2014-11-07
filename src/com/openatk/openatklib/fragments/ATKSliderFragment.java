@@ -262,5 +262,4 @@ public class ATKSliderFragment extends Fragment implements OnTouchListener {
 	        return true;
 	    }
 	}
-	
 }

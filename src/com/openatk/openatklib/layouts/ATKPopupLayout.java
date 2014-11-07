@@ -6,9 +6,7 @@ import android.os.Parcel;
 import android.os.Parcelable;
 import android.util.AttributeSet;
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.View.OnTouchListener;
 import android.view.animation.Animation;
 import android.view.animation.Transformation;
 import android.view.ViewGroup;
@@ -16,31 +14,30 @@ import android.widget.RelativeLayout;
 
 import com.openatk.openatklib.R;
 
-public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
+public class ATKPopupLayout extends ViewGroup {
 	
-	public static int SIZE_FULLSCREEN = 3;
 	public static int SIZE_OPEN = 2;
 	public static int SIZE_CLOSED = 1;
 	public static int SIZE_HIDDEN = 0;
 
 	//For sliding
 	private int sliderPosition = SIZE_CLOSED;
-	private int maxHeight;
-	private int middleHeight;
-	private int tabHeight = 0;
-	private int sliderStartDrag = 0;
-	private int sliderHeightStart = 0;
+	
+	private int maxHeight = 0; //Height of screen
+	private int openHeight = 0; //Height of all the hidden elements
+	private int tabHeight = 0; //Height of elements with shown:true
+	
 	
 	private int hSpacing;
 	private int vSpacing;
 	private int currentHeight;
 		
-	public ATKSliderLayout(Context context) {
+	public ATKPopupLayout(Context context) {
 		super(context);
 		// From code
 	}
 
-	public ATKSliderLayout(Context context, AttributeSet attrs) {
+	public ATKPopupLayout(Context context, AttributeSet attrs) {
 		super(context, attrs);
 		// From xml
 
@@ -53,8 +50,6 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 		}
 
 		maxHeight = this.getResources().getDisplayMetrics().heightPixels;
-		middleHeight = maxHeight / 3;		
-		this.setOnTouchListener(this);
 	}
 	
 	
@@ -65,7 +60,8 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 
 		int width = getPaddingLeft();
 		int height = getPaddingTop();
-
+		int heightHidden = 0;
+		
 		int currentX = getPaddingLeft();
 		
 		final int count = getChildCount();
@@ -83,7 +79,10 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 			if (lp.breakLine) {
 				//Tabs are the only ones the contribute to the height
 				height += child.getMeasuredHeight();
+			} else {
+				heightHidden += child.getMeasuredHeight();
 			}
+			
 			width = Math.max(width, child.getMeasuredWidth());
 			
 			//Get ready for next child
@@ -94,7 +93,7 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 		height += getPaddingBottom();
 		
 		tabHeight = height; //Update our tabHeight in case it changed
-		
+		openHeight = height + heightHidden; //Height when fully shown.		
 		setMeasuredDimension(resolveSize(width, widthMeasureSpec), resolveSize(height, heightMeasureSpec));
 	}
 
@@ -208,18 +207,15 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 	public void setSize(int size){
 		setSize(size, true);
 	}
-	public void setSize(int size, boolean animate){
-		Log.d("ATKSliderLayout", "SetSize:" + Integer.toString(size));
-		if(size != ATKSliderLayout.SIZE_OPEN && size != ATKSliderLayout.SIZE_CLOSED && size != ATKSliderLayout.SIZE_FULLSCREEN && size != ATKSliderLayout.SIZE_HIDDEN){
-			Log.e("ATKSlider", "Invaild size given for ATKSliderLayout.setSize()");
+	public void setSize(int size, boolean animate){		
+		if(size != ATKPopupLayout.SIZE_OPEN && size != ATKPopupLayout.SIZE_CLOSED && size != ATKPopupLayout.SIZE_HIDDEN){
+			Log.e("ATKPopupLayout", "Invaild size given for ATKPopupLayout.setSize()");
 		} else {
 			int newHeight = 0; //SIZE_HIDDEN
 			if(size == SIZE_CLOSED){
 				newHeight = tabHeight;
 			} else if (size == SIZE_OPEN){
-				newHeight = middleHeight;
-			} else if(size == SIZE_FULLSCREEN) {
-				newHeight = maxHeight;
+				newHeight = openHeight;
 			}
 			sliderPosition = size;
 
@@ -235,72 +231,7 @@ public class ATKSliderLayout extends ViewGroup implements OnTouchListener {
 			this.currentHeight = params.height - tabHeight;
 		}
 	}
-	@Override
-	public boolean onTouch(View v, MotionEvent event) {
-		float eventY = event.getRawY();
 
-		switch (event.getAction()) {
-		case MotionEvent.ACTION_DOWN: {
-			this.SliderDragDown((int) eventY);
-			break;
-		}
-		case MotionEvent.ACTION_UP: {
-			this.SliderDragUp((int) (eventY));
-			break;
-		}
-		case MotionEvent.ACTION_MOVE: {
-			this.SliderDragDragging((int) (eventY));
-			break;
-		}
-		}
-		return true;
-	}
-	private void SliderDragDown(int start) {
-		RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) this.getLayoutParams();
-		sliderStartDrag = maxHeight - start - params.height;
-		sliderHeightStart = params.height;
-	}
-
-	private void SliderDragDragging(int whereY) {
-		RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) this.getLayoutParams();
-		if ((maxHeight - whereY - sliderStartDrag) > tabHeight) {
-			params.height = maxHeight - whereY - sliderStartDrag;
-		} else {
-			params.height = tabHeight;
-		}
-		this.setLayoutParams(params);
-	}
-
-	private void SliderDragUp(int whereY) {
-		// Find end height
-		RelativeLayout.LayoutParams params = (RelativeLayout.LayoutParams) this.getLayoutParams();
-		if (params.height > sliderHeightStart) {
-			// Make bigger
-			SliderGrow();
-		} else {
-			// Make smaller
-			SliderShrink();
-		}
-	}
-	private void SliderShrink() {
-		if (sliderPosition == SIZE_OPEN) {
-			// Open -> Closed
-			this.setSize(SIZE_CLOSED);
-		} else if (sliderPosition == SIZE_FULLSCREEN) {
-			// Fullscreen -> Open
-			this.setSize(SIZE_OPEN);
-		}
-	}
-
-	private void SliderGrow() {
-		if (sliderPosition == SIZE_CLOSED) {
-			// Closed -> Open
-			this.setSize(SIZE_OPEN);
-		} else if (sliderPosition == SIZE_OPEN) {
-			// Open -> Fullscreen
-			this.setSize(SIZE_FULLSCREEN);
-		}
-	}
 	private class DropDownAnim extends Animation {
 		int targetHeight;
 		int startHeight;

@@ -5,8 +5,6 @@
     android:clickable="true"
     android:background="#D1D1D1">
     
-
-    
     <FrameLayout
         android:id="@+id/fragment_slider_tab_container"
 	    android:layout_width="match_parent"
