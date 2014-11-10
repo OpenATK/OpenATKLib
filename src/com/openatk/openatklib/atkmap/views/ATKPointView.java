@@ -82,6 +82,19 @@ public class ATKPointView {
 		if(this.marker != null) marker.setIcon(icon);
 	}
 	
+	public void setVisible(boolean visible){
+		if(visible){
+			this.show();
+		} else {
+			this.hide();
+		}
+	}
+	
+	public boolean getVisible(){
+		if(marker != null) return marker.isVisible();
+		return false;
+	}
+	
 	public int getIconWidth(){
 		return this.iconWidth;
 	}

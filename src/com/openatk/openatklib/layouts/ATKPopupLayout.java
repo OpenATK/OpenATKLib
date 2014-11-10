@@ -80,6 +80,7 @@ public class ATKPopupLayout extends ViewGroup {
 				//Tabs are the only ones the contribute to the height
 				height += child.getMeasuredHeight();
 			} else {
+				//TODO this might have to be calculated after a separate measureChild call with MeasureSpec.UNSPECIFIED
 				heightHidden += child.getMeasuredHeight();
 			}
 			
@@ -92,8 +93,8 @@ public class ATKPopupLayout extends ViewGroup {
 		width += getPaddingRight();
 		height += getPaddingBottom();
 		
-		tabHeight = height; //Update our tabHeight in case it changed
-		openHeight = height + heightHidden; //Height when fully shown.		
+		if(tabHeight == 0) tabHeight = height; //Update our tabHeight in case it changed
+		if(openHeight == 0) openHeight = height + heightHidden; //Height when fully shown.		
 		setMeasuredDimension(resolveSize(width, widthMeasureSpec), resolveSize(height, heightMeasureSpec));
 	}
 
@@ -107,8 +108,6 @@ public class ATKPopupLayout extends ViewGroup {
 			child.layout(lp.x, lp.y, lp.x + child.getMeasuredWidth(), lp.y + child.getMeasuredHeight());
 		}	    
 	}
-
-	
 	
 	@Override
 	protected void onRestoreInstanceState(Parcelable state) {
@@ -119,6 +118,7 @@ public class ATKPopupLayout extends ViewGroup {
 	    SavedState ss = (SavedState)state;
 	    super.onRestoreInstanceState(ss.getSuperState());
 	    this.sliderPosition = ss.sliderPosition;
+	    this.openHeight = ss.openHeight;
     	this.setSize(this.sliderPosition, false);
 	}
 
@@ -127,39 +127,42 @@ public class ATKPopupLayout extends ViewGroup {
 		Parcelable superState = super.onSaveInstanceState();
 		SavedState ss = new SavedState(superState);
 		ss.sliderPosition = this.sliderPosition;
+		ss.openHeight = this.openHeight;
 		return ss;
 	}
 
 	static class SavedState extends BaseSavedState {
-		   int sliderPosition;
+		int sliderPosition;
+		int openHeight;
+		SavedState(Parcelable superState) {
+			super(superState);
+		}
 
-		    SavedState(Parcelable superState) {
-		      super(superState);
-		    }
+		private SavedState(Parcel in) {
+			super(in);
+			this.sliderPosition = in.readInt();
+			this.openHeight = in.readInt();
+		}
 
-		    private SavedState(Parcel in) {
-		      super(in);
-		      this.sliderPosition = in.readInt();
-		    }
+		@Override
+		public void writeToParcel(Parcel out, int flags) {
+			super.writeToParcel(out, flags);
+			out.writeInt(this.sliderPosition);
+			out.writeInt(this.openHeight);
+		}
 
-		    @Override
-		    public void writeToParcel(Parcel out, int flags) {
-		      super.writeToParcel(out, flags);
-		      out.writeInt(this.sliderPosition);
-		    }
-
-		    //required field that makes Parcelables from a Parcel
-		    public static final Parcelable.Creator<SavedState> CREATOR =
-		        new Parcelable.Creator<SavedState>() {
-		          public SavedState createFromParcel(Parcel in) {
-		            return new SavedState(in);
-		          }
-		          public SavedState[] newArray(int size) {
-		            return new SavedState[size];
-		          }
-		    };
+		//required field that makes Parcelables from a Parcel
+		public static final Parcelable.Creator<SavedState> CREATOR =
+				new Parcelable.Creator<SavedState>() {
+			public SavedState createFromParcel(Parcel in) {
+				return new SavedState(in);
+			}
+			public SavedState[] newArray(int size) {
+				return new SavedState[size];
+			}
+		};
 	}
-	
+
 	@Override
 	protected boolean checkLayoutParams(ViewGroup.LayoutParams p) {
 		return p instanceof LayoutParams;
@@ -215,6 +218,7 @@ public class ATKPopupLayout extends ViewGroup {
 			if(size == SIZE_CLOSED){
 				newHeight = tabHeight;
 			} else if (size == SIZE_OPEN){
+				Log.d("ATKPopupLayout - setSize", "OpenHeight:" + Integer.toString(openHeight));
 				newHeight = openHeight;
 			}
 			sliderPosition = size;
