@@ -500,7 +500,7 @@ public class ATKMap implements ATKTouchableWrapperListener {
 					break;
 				}
 			}
-			if(wasClicked != null){
+			if(wasClicked != null && atkPointClickListener != null){
 				//Was clicked but wasn't consumed, pass to default atkPointClickListener
 				atkPointClickListener.onPointClick(point);
 			}
