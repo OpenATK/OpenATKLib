@@ -8,6 +8,7 @@ import android.util.Log;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.BitmapDescriptor;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
+import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.openatk.openatklib.R;
@@ -39,6 +40,28 @@ public class ATKPointView {
 		markerOptions = new MarkerOptions().position(point.position);
 		this.drawPoint();
 	}
+	
+	public ATKPointView(GoogleMap map, ATKPointViewOptions options){
+		this(map, options.getAtkPoint(), options);
+		if(options.getAtkPoint() == null) Log.w("ATKPointView", "ATKPointViewOptions ATKPoint is null.");
+	}
+	
+	public ATKPointView(GoogleMap map, ATKPoint point, ATKPointViewOptions options){
+		this.map = map;
+		markerOptions = new MarkerOptions();
+		
+		this.point = point;
+		if(options.getAnchor() != null)  this.setAnchor(options.getAnchor().getAnchorHorizontal(), options.getAnchor().getAnchorVertical());
+		if(options.getData() != null) this.setData(options.getData());
+		if(options.getIcon() != null) this.setIcon(options.getIcon(), options.getIconWidth(), options.getIconHeight());
+		if(options.getClickListener() != null) this.setOnClickListener(options.getClickListener());
+		if(options.getDragListener() != null) this.setOnDragListener(options.getDragListener());
+		if(options.getSuperDraggable() != null) this.setSuperDraggable(options.getSuperDraggable());
+		if(options.getVisible() != null) this.setVisible(options.getVisible());
+		
+		this.drawPoint();
+	}
+	
 	
 	public ATKPoint getAtkPoint(){
 		return point;
@@ -180,6 +203,13 @@ public class ATKPointView {
 			} else {
 				marker.setPosition(point.position);
 			}
+		}
+	}
+	
+	public void setPosition(LatLng position){
+		if(point != null){
+			point.position = position;
+			this.update();
 		}
 	}
 	

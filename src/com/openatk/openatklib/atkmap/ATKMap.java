@@ -44,6 +44,7 @@ import com.openatk.openatklib.atkmap.models.ATKPoint;
 import com.openatk.openatklib.atkmap.models.ATKPolygon;
 import com.openatk.openatklib.atkmap.models.ATKPolyline;
 import com.openatk.openatklib.atkmap.views.ATKPointView;
+import com.openatk.openatklib.atkmap.views.ATKPointViewOptions;
 import com.openatk.openatklib.atkmap.views.ATKPolygonView;
 import com.openatk.openatklib.atkmap.views.ATKPolylineView;
 
@@ -218,6 +219,19 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.points.add(pointView);
 		return pointView;
 	}
+	
+	public ATKPointView addPoint(ATKPointViewOptions pointOptions){
+		ATKPointView pointView = new ATKPointView(map,pointOptions);
+		this.points.add(pointView);
+		return pointView;
+	}
+	
+	public ATKPointView addPoint(ATKPoint point, ATKPointViewOptions pointOptions){
+		ATKPointView pointView = new ATKPointView(map, point, pointOptions);
+		this.points.add(pointView);
+		return pointView;
+	}
+	
 	public ATKPolygonView addPolygon(ATKPolygon polygon){
 		ATKPolygonView polygonView = new ATKPolygonView(map, polygon);
 		this.polygons.add(polygonView);
