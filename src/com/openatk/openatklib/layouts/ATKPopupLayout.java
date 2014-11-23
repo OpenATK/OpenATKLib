@@ -28,6 +28,9 @@ public class ATKPopupLayout extends ViewGroup {
 	private int tabHeight = 0; //Height of elements with shown:true
 	
 	
+	private int lastWidthMeasureSpec = 0;
+	private int lastHeightMeasureSpec = 0;
+
 	private int hSpacing;
 	private int vSpacing;
 	private int currentHeight;
@@ -58,6 +61,9 @@ public class ATKPopupLayout extends ViewGroup {
 		int widthSize = MeasureSpec.getSize(widthMeasureSpec);
 		int widthMode = MeasureSpec.getMode(widthMeasureSpec);
 
+		lastWidthMeasureSpec = widthSize;
+		lastHeightMeasureSpec = heightMeasureSpec;
+		
 		int width = getPaddingLeft();
 		int height = getPaddingTop();
 		int heightHidden = 0;
@@ -75,27 +81,36 @@ public class ATKPopupLayout extends ViewGroup {
 			lp.x = currentX;
 			lp.y = height;
 			
+			width = Math.max(width, child.getMeasuredWidth());
+
 			//Add totals
 			if (lp.breakLine) {
 				//Tabs are the only ones the contribute to the height
 				height += child.getMeasuredHeight();
 			} else {
 				//TODO this might have to be calculated after a separate measureChild call with MeasureSpec.UNSPECIFIED
+				this.measureChild(child, widthMeasureSpec, MeasureSpec.UNSPECIFIED);
 				heightHidden += child.getMeasuredHeight();
 			}
-			
-			width = Math.max(width, child.getMeasuredWidth());
 			
 			//Get ready for next child
 			currentX = getPaddingLeft();
 		}
-
+		
 		width += getPaddingRight();
 		height += getPaddingBottom();
 		
 		if(tabHeight == 0) tabHeight = height; //Update our tabHeight in case it changed
-		if(openHeight == 0) openHeight = height + heightHidden; //Height when fully shown.		
+		if(openHeight == 0 || (height+heightHidden) > openHeight) openHeight = height + heightHidden; //Height when fully shown.		
 		setMeasuredDimension(resolveSize(width, widthMeasureSpec), resolveSize(height, heightMeasureSpec));
+	}
+	
+	public void beforeResize(){
+		this.openHeight = 0;
+	}
+	
+	public void afterResize(){
+		this.measure(lastWidthMeasureSpec, MeasureSpec.UNSPECIFIED);
 	}
 
 	@Override
@@ -104,7 +119,6 @@ public class ATKPopupLayout extends ViewGroup {
 		for (int i = 0; i < count; i++) {
 			View child = getChildAt(i);
 			LayoutParams lp = (LayoutParams) child.getLayoutParams();
-
 			child.layout(lp.x, lp.y, lp.x + child.getMeasuredWidth(), lp.y + child.getMeasuredHeight());
 		}	    
 	}

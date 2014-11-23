@@ -381,14 +381,15 @@ public class ATKPolygonView {
 	public float getAcres(){		
 		if(this.polygon.boundary.size() < 3) return 0.0f;
 		
+		double earth_radius = (double) 6371009.0f; // in meters
+		double lat_dist = (double) ((Math.PI * earth_radius) / (double) 180.0f);
+		
 		Float newArea = 0.0f;
 		List<Pair<Double, Double>> xyList = new ArrayList<Pair<Double, Double>>();
 		for (int i = 0; i < this.polygon.boundary.size(); i++) {
 			//Reproject
-			double earth_radius = (double) 6371009.0f; // in meters
-			double lat_dist = (double) ((Math.PI * earth_radius) / (double) 180.0f);
 			double y = this.polygon.boundary.get(i).latitude * lat_dist;
-			double x = this.polygon.boundary.get(i).longitude * lat_dist * Math.cos(Math.toRadians(this.polygon.boundary.get(i).longitude));
+			double x = this.polygon.boundary.get(i).longitude * lat_dist * Math.cos(Math.toRadians(this.polygon.boundary.get(i).latitude));
 			//Save x, y
 			xyList.add(new Pair<Double, Double>(x,y));
 		}
@@ -401,7 +402,7 @@ public class ATKPolygonView {
 		for(int i = 0; i < (xyList.size()-1); i++){
 			Pair<Double, Double> thisVert = xyList.get(i);
 			Pair<Double, Double> nextVert = xyList.get(i+1);
-
+			
 			if(haveRef == false){
 				haveRef = true;
 				refX = thisVert.first;
