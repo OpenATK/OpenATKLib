@@ -249,6 +249,10 @@ public class ATKPopupLayout extends ViewGroup {
 			this.currentHeight = params.height - tabHeight;
 		}
 	}
+	
+	public int getSize(){
+		return sliderPosition;
+	}
 
 	private class DropDownAnim extends Animation {
 		int targetHeight;
