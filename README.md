@@ -2,6 +2,8 @@ OpenATKLib
 ==========
 [Classes And Functions](https://docs.google.com/document/d/1cxX2D9vl8VNLVELuPf5Uqk_jTwsIdi2En9od31LhaSw/edit?usp=sharing)
 
+***
+
 ## **Setup**
 ### In your xml layout replace the google map fragment with:
 \<fragment
@@ -16,6 +18,13 @@ OpenATKLib
 
 ### Then call getAtkMap() in the place of getMap():
 `ATKMap atkmap = fragmentMap.getAtkMap();`  
+
+***
+
+## **Requirements**
+- google-play-services_lib (using rev: 22)
+- android-support-v4
+- gson-2.2.4
 
 ***
 
