@@ -248,7 +248,7 @@ public class ATKPolygonView {
 		this.polygon.label = label;
 		this.viewOptions.setBlnLabelSelected(selected);
 		
-		if(label == null || label.length() == 0){
+		if(label == null || label.trim().length() == 0){
 			this.drawLabel();
 			return;
 		}

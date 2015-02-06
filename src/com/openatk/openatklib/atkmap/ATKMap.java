@@ -88,8 +88,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	int PointSelectedPolygonDrawingHeight = 0;
 	int PointSelectedPolygonDrawingWidth = 0;
 
-	float anchorVPointSelectedPolygonDrawing = 0.75f;
-	float anchorUPointSelectedPolygonDrawing = 0.25f;
+	float anchorVPointSelectedPolygonDrawing = 0.5f;
+	float anchorUPointSelectedPolygonDrawing = 0.5f;
 	float anchorVPanPointSelectedPolygonDrawing = 0.5f;
 	float anchorUPanPointSelectedPolygonDrawing = 0.5f;
 	int panWidthPointSelectedPolygonDrawing = 64;
