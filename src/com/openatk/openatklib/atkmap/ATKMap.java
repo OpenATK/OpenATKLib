@@ -21,6 +21,7 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.GoogleMap.CancelableCallback;
 import com.google.android.gms.maps.GoogleMap.OnMapClickListener;
 import com.google.android.gms.maps.GoogleMap.OnMarkerClickListener;
+import com.google.android.gms.maps.GoogleMap.OnMarkerDragListener;
 import com.google.android.gms.maps.Projection;
 import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptor;
@@ -142,7 +143,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 	//Used locally to handle events
 	private GoogleMapClickListener googleMapClickListener;
 	private GoogleMarkerClickListener googleMarkerClickListener;
-	
+	private GoogleMarkerDragListener googleMarkerDragListener;
+
 	private Context context;
 	private GestureDetector gestureDetector;
 
@@ -153,7 +155,8 @@ public class ATKMap implements ATKTouchableWrapperListener {
 		this.googleMarkerClickListener = new GoogleMarkerClickListener();
 		map.setOnMapClickListener(googleMapClickListener);
 		map.setOnMarkerClickListener(googleMarkerClickListener);
-		
+		map.setOnMarkerDragListener(googleMarkerDragListener);
+
 		//Get point icons from resources
 		this.iconPointSelectedPolygonDrawing = BitmapDescriptorFactory.fromResource(this.resIdPointSelectedPolygonDrawing);
 		this.iconPointPolygonDrawing = BitmapDescriptorFactory.fromResource(this.resIdPointPolygonDrawing);
@@ -528,6 +531,81 @@ public class ATKMap implements ATKTouchableWrapperListener {
 			}
 			
 			return false;
+		}
+	}
+
+	private class GoogleMarkerDragListener implements OnMarkerDragListener {
+		@Override
+		public void onMarkerDrag(Marker marker){
+			Boolean wasThisPoint = null;
+			ATKPointView point = null;
+			for(int i=0; i<points.size(); i++){
+				wasThisPoint = points.get(i).wasDragged(marker); //This does the click event on atkPointClickListener, null if not clicked, true if clicked and consumed, false if clicked and not consumed
+				if(wasThisPoint != null) {
+					//Set ATKPoints positon to match the dragged marker
+					points.get(i).getAtkPoint().position = marker.getPosition()
+				}
+				if(wasThisPoint == null){
+					//Not clicked
+				} else if(wasThisPoint == true){
+					return true; //Consume the drag
+				} else if(wasThisPoint == false){
+					point = points.get(i);
+					break;
+				}
+			}
+			if(wasThisPoint != null && atkPointDragListener != null){
+				//Was clicked but wasn't consumed, pass to default atkPointClickListener
+				atkPointDragListener.onPointDrag(point);
+			}
+		}
+		@Override
+		public void onMarkerDragEnd(Marker marker){
+			Boolean wasThisPoint = null;
+			ATKPointView point = null;
+			for(int i=0; i<points.size(); i++){
+				wasThisPoint = points.get(i).wasDragEnded(marker); //This does the click event on atkPointClickListener, null if not clicked, true if clicked and consumed, false if clicked and not consumed
+				if(wasThisPoint != null) {
+					//Set ATKPoints positon to match the dragged marker
+					points.get(i).getAtkPoint().position = marker.getPosition()
+				}
+				if(wasThisPoint == null){
+					//Not clicked
+				} else if(wasThisPoint == true){
+					return true; //Consume the drag
+				} else if(wasThisPoint == false){
+					point = points.get(i);
+					break;
+				}
+			}
+			if(wasThisPoint != null && atkPointDragListener != null){
+				//Was clicked but wasn't consumed, pass to default atkPointClickListener
+				atkPointDragListener.onPointDragEnd(point);
+			}
+		}
+		@Override
+		public void onMarkerDragStart(Marker marker){
+			Boolean wasThisPoint = null;
+			ATKPointView point = null;
+			for(int i=0; i<points.size(); i++){
+				wasThisPoint = points.get(i).wasDragEnded(marker); //This does the click event on atkPointClickListener, null if not clicked, true if clicked and consumed, false if clicked and not consumed
+				if(wasThisPoint != null) {
+					//Set ATKPoints positon to match the dragged marker
+					points.get(i).getAtkPoint().position = marker.getPosition()
+				}
+				if(wasThisPoint == null){
+					//Not clicked
+				} else if(wasThisPoint == true){
+					return true; //Consume the drag
+				} else if(wasThisPoint == false){
+					point = points.get(i);
+					break;
+				}
+			}
+			if(wasThisPoint != null && atkPointDragListener != null){
+				//Was clicked but wasn't consumed, pass to default atkPointClickListener
+				atkPointDragListener.onPointDragStart(point);
+			}
 		}
 	}
 

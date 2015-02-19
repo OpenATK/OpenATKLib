@@ -159,6 +159,45 @@ public class ATKPointView {
 		}
 		return consumed;
 	}
+
+	public Boolean wasDragStarted(Marker draggedMarker) { //TODO protected, native dragging
+		//Returns null if wasn't drug, false if drug and not consumed, true if drug and consumed
+		Boolean consumed = null
+		if(this.marker.equals(draggedMarker)){
+			consumed = false;
+			//Check if we have a click listener
+			if(this.dragListener != null){
+				consumed = this.dragListener.onPointDragStart(this);
+			}
+		}
+		return consumed;
+	}
+
+	public Boolean wasDragEnded(Marker draggedMarker) { //TODO protected, native dragging
+		//Returns null if wasn't drug, false if drug and not consumed, true if drug and consumed
+		Boolean consumed = null
+		if(this.marker.equals(draggedMarker)){
+			consumed = false;
+			//Check if we have a click listener
+			if(this.dragListener != null){
+				consumed = this.dragListener.onPointDragEnd(this);
+			}
+		}
+		return consumed;
+	}
+
+	public Boolean wasDragged(Marker draggedMarker) { //TODO protected, native dragging
+		//Returns null if wasn't drug, false if drug and not consumed, true if drug and consumed
+		Boolean consumed = null
+		if(this.marker.equals(draggedMarker)){
+			consumed = false;
+			//Check if we have a click listener
+			if(this.dragListener != null){
+				consumed = this.dragListener.onPointDrag(this);
+			}
+		}
+		return consumed;
+	}
 	
 	public Boolean dragStart(){
 		Boolean ret = null;
